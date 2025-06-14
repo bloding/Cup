@@ -74,9 +74,12 @@ const Footer: React.FC = () => {
         {/* Crypto Wallet Info */}
         <div className="border-t border-blue-700 mt-8 pt-8">
           <div className="bg-green-900 bg-opacity-50 rounded-lg p-4">
-            <h4 className="text-lg font-semibold text-green-300 mb-2">Cryptocurrency Payments</h4>
+            <h4 className="text-lg font-semibold text-green-300 mb-2 flex items-center space-x-2">
+              <div className="text-xl">💎</div>
+              <span>Cryptocurrency Payments - 30% Discount</span>
+            </h4>
             <p className="text-green-200 text-sm mb-2">
-              Pay with crypto and save 50%! Send payments to our secure wallet:
+              Pay with crypto and save 30%! Send payments to our secure wallet:
             </p>
             <div className="bg-black bg-opacity-30 rounded-lg p-3 font-mono text-sm text-green-300 break-all">
               0x62468C025d2738eDB2662B9994F52Af0Afa17c9d
@@ -92,7 +95,7 @@ const Footer: React.FC = () => {
           <p className="text-blue-200 text-sm">
             © 2024 FIFA World Cup 2026 Ticket Portal. All rights reserved. 
             <span className="block mt-1">
-              Secure payments • Instant delivery • 24/7 customer support
+              Secure crypto payments • Instant delivery • 24/7 customer support
             </span>
           </p>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Mail, Phone, MapPin, Calendar, CreditCard, Check, Copy, ExternalLink, Smartphone } from 'lucide-react';
+import { X, User, Mail, Phone, MapPin, Calendar, Check, Copy, ExternalLink, Smartphone } from 'lucide-react';
 
 interface RegistrationFormProps {
   isOpen: boolean;
@@ -24,7 +24,6 @@ interface FormData {
   city: string;
   country: string;
   postalCode: string;
-  paymentMethod: 'crypto' | 'card';
   agreeTerms: boolean;
   agreeMarketing: boolean;
 }
@@ -71,7 +70,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
     city: '',
     country: '',
     postalCode: '',
-    paymentMethod: 'crypto',
     agreeTerms: false,
     agreeMarketing: false
   });
@@ -121,17 +119,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
 🎟️ Ticket Details:
 • ${ticketInfo.title}
-• Payment Method: ${formData.paymentMethod === 'crypto' ? 'Cryptocurrency (50% Discount)' : 'Credit Card'}
-• Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice.toLocaleString() : ticketInfo.price.toLocaleString()}
+• Payment Method: Cryptocurrency (30% Discount)
+• Amount: $${ticketInfo.cryptoPrice.toLocaleString()}
 
-${formData.paymentMethod === 'crypto' ? 
-`💰 Crypto Payment Details:
+💰 Crypto Payment Details:
 • Wallet Address: ${walletAddress}
 • Amount to Send: $${ticketInfo.cryptoPrice.toLocaleString()} worth of ETH/BTC/USDT
-• Payment Status: Pending Confirmation` : 
-`💳 Credit Card Payment:
-• Amount: $${ticketInfo.price.toLocaleString()}
-• Payment Status: Awaiting Processing`}
+• Payment Status: Pending Confirmation
 
 Please confirm this order and process my ticket purchase. Thank you!
     `.trim();
@@ -238,8 +232,8 @@ Please confirm this order and process my ticket purchase. Thank you!
             <span className="text-sm text-gray-500">
               {currentStep === 1 && 'Personal Information'}
               {currentStep === 2 && 'Address Details'}
-              {currentStep === 3 && 'Payment Method'}
-              {currentStep === 4 && 'Payment Confirmation'}
+              {currentStep === 3 && 'Terms & Conditions'}
+              {currentStep === 4 && 'Crypto Payment'}
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
@@ -446,64 +440,47 @@ Please confirm this order and process my ticket purchase. Thank you!
             </div>
           )}
 
-          {/* Step 3: Payment Method Selection */}
+          {/* Step 3: Terms and Conditions */}
           {currentStep === 3 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
-                <CreditCard className="h-12 w-12 text-blue-600 mx-auto mb-2" />
-                <h3 className="text-xl font-bold text-gray-800">Payment Method</h3>
-                <p className="text-gray-600">Choose your preferred payment method</p>
+                <Check className="h-12 w-12 text-blue-600 mx-auto mb-2" />
+                <h3 className="text-xl font-bold text-gray-800">Terms & Conditions</h3>
+                <p className="text-gray-600">Please review and accept our terms</p>
               </div>
 
               {/* Order Summary */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
                 <h4 className="font-semibold text-gray-800 mb-2">Order Summary</h4>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">{ticketInfo.title}</span>
-                  <span className="font-bold text-gray-800">${ticketInfo.price.toLocaleString()}</span>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-700">{ticketInfo.title}</span>
+                    <span className="font-bold text-gray-800">${ticketInfo.price.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-green-600">
+                    <span className="font-semibold">Crypto Discount (30%)</span>
+                    <span className="font-bold">-${(ticketInfo.price - ticketInfo.cryptoPrice).toLocaleString()}</span>
+                  </div>
+                  <div className="border-t pt-2 flex justify-between items-center">
+                    <span className="text-lg font-bold text-gray-800">Total (Crypto Payment)</span>
+                    <span className="text-xl font-bold text-green-600">${ticketInfo.cryptoPrice.toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Payment Method Selection */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'crypto' }))}
-                  className={`p-6 rounded-lg border-2 transition-all duration-200 ${
-                    formData.paymentMethod === 'crypto'
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="text-center">
-                    <div className="text-3xl mb-3">💎</div>
-                    <div className="font-semibold text-lg">Cryptocurrency</div>
-                    <div className="text-sm text-green-600 font-bold mb-2">50% DISCOUNT!</div>
-                    <div className="text-2xl font-bold">${ticketInfo.cryptoPrice.toLocaleString()}</div>
-                    <div className="text-xs text-gray-500 mt-1">ETH, BTC, USDT accepted</div>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'card' }))}
-                  className={`p-6 rounded-lg border-2 transition-all duration-200 ${
-                    formData.paymentMethod === 'card'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="text-center">
-                    <CreditCard className="h-12 w-12 mx-auto mb-3" />
-                    <div className="font-semibold text-lg">Credit Card</div>
-                    <div className="text-sm text-gray-500 mb-2">Regular Price</div>
-                    <div className="text-2xl font-bold">${ticketInfo.price.toLocaleString()}</div>
-                    <div className="text-xs text-gray-500 mt-1">Visa, Mastercard, Amex</div>
-                  </div>
-                </button>
+              {/* Payment Method Info */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="text-2xl">💎</div>
+                  <h4 className="font-semibold text-green-800">Cryptocurrency Payment Only</h4>
+                </div>
+                <p className="text-green-700 text-sm">
+                  We accept ETH, BTC, USDT and other major cryptocurrencies. Enjoy 30% discount on all tickets!
+                </p>
               </div>
 
               {/* Terms and Conditions */}
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <label className="flex items-start space-x-3 cursor-pointer">
                   <input
                     type="checkbox"
@@ -533,12 +510,12 @@ Please confirm this order and process my ticket purchase. Thank you!
             </div>
           )}
 
-          {/* Step 4: Payment Confirmation */}
+          {/* Step 4: Crypto Payment */}
           {currentStep === 4 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
-                <Check className="h-12 w-12 text-green-600 mx-auto mb-2" />
-                <h3 className="text-xl font-bold text-gray-800">Payment Confirmation</h3>
+                <div className="text-4xl mb-2">💎</div>
+                <h3 className="text-xl font-bold text-gray-800">Cryptocurrency Payment</h3>
                 <p className="text-gray-600">Complete your payment to secure your tickets</p>
               </div>
 
@@ -556,44 +533,34 @@ Please confirm this order and process my ticket purchase. Thank you!
               </div>
 
               {/* Payment Instructions */}
-              {formData.paymentMethod === 'crypto' ? (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                  <h4 className="font-semibold text-green-800 mb-3 flex items-center">
-                    💰 Cryptocurrency Payment - 50% Discount Applied!
-                  </h4>
-                  <p className="text-green-700 mb-4">
-                    Send exactly <strong>${ticketInfo.cryptoPrice.toLocaleString()}</strong> worth of ETH, BTC, or USDT to the address below:
-                  </p>
-                  
-                  <div className="bg-white border rounded-lg p-4 mb-4">
-                    <div className="flex items-center justify-between">
-                      <div className="font-mono text-sm break-all mr-2 select-all">{walletAddress}</div>
-                      <button
-                        type="button"
-                        onClick={copyToClipboard}
-                        className="flex items-center space-x-1 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors flex-shrink-0"
-                      >
-                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                        <span>{copied ? 'Copied!' : 'Copy'}</span>
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                    <p className="text-yellow-800 text-sm">
-                      ⚠️ <strong>Important:</strong> After sending the payment, click the WhatsApp button below to confirm your transaction with our team.
-                    </p>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <h4 className="font-semibold text-green-800 mb-3 flex items-center">
+                  💰 Cryptocurrency Payment - 30% Discount Applied!
+                </h4>
+                <p className="text-green-700 mb-4">
+                  Send exactly <strong>${ticketInfo.cryptoPrice.toLocaleString()}</strong> worth of ETH, BTC, or USDT to the address below:
+                </p>
+                
+                <div className="bg-white border rounded-lg p-4 mb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="font-mono text-sm break-all mr-2 select-all">{walletAddress}</div>
+                    <button
+                      type="button"
+                      onClick={copyToClipboard}
+                      className="flex items-center space-x-1 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors flex-shrink-0"
+                    >
+                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      <span>{copied ? 'Copied!' : 'Copy'}</span>
+                    </button>
                   </div>
                 </div>
-              ) : (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                  <h4 className="font-semibold text-blue-800 mb-3">Credit Card Payment</h4>
-                  <p className="text-blue-700 mb-4">
-                    Contact us via WhatsApp to process your credit card payment securely.
+                
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                  <p className="text-yellow-800 text-sm">
+                    ⚠️ <strong>Important:</strong> After sending the payment, click the WhatsApp button below to confirm your transaction with our team.
                   </p>
-                  <div className="text-2xl font-bold text-blue-800">Total: ${ticketInfo.price.toLocaleString()}</div>
                 </div>
-              )}
+              </div>
 
               {/* WhatsApp Confirmation */}
               <button

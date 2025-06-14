@@ -35,7 +35,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
     type: 'match' as const,
     title: `${match.homeTeam} vs ${match.awayTeam} - ${categoryLabels[selectedCategory]}`,
     price: match.prices[selectedCategory],
-    cryptoPrice: Math.round(match.prices[selectedCategory] * 0.5)
+    cryptoPrice: Math.round(match.prices[selectedCategory] * 0.7) // 30% discount
   };
 
   return (
@@ -75,7 +75,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
             </div>
             <div className="flex items-center space-x-2 text-gray-600">
               <Clock className="h-4 w-4" />
-              <span>{match.time} Local Time</span>
+              <span>{match.time}</span>
             </div>
             <div className="flex items-center space-x-2 text-gray-600">
               <MapPin className="h-4 w-4" />
@@ -112,17 +112,17 @@ const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
               <span className="text-sm font-semibold">💰 Crypto Payment Discount:</span>
             </div>
             <div className="text-green-800 font-bold">
-              Pay ${Math.round(match.prices[selectedCategory] * 0.5)} with crypto (50% OFF!)
+              Pay ${Math.round(match.prices[selectedCategory] * 0.7)} with crypto (30% OFF!)
             </div>
           </div>
 
           {/* Book Button */}
           <button
             onClick={handleBookNow}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2"
+            className="w-full bg-gradient-to-r from-green-600 to-green-800 hover:from-green-700 hover:to-green-900 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-2"
           >
-            <CreditCard className="h-5 w-5" />
-            <span>Book Now - ${match.prices[selectedCategory]}</span>
+            <div className="text-xl">💎</div>
+            <span>Book with Crypto - ${Math.round(match.prices[selectedCategory] * 0.7)}</span>
           </button>
         </div>
       </div>

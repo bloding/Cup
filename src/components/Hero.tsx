@@ -52,9 +52,9 @@ const Hero: React.FC = () => {
           {/* Crypto discount banner */}
           <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 max-w-4xl mx-auto transform hover:scale-105 transition-all duration-300">
             <div className="flex items-center justify-center space-x-4">
-              <Zap className="h-8 w-8 text-white animate-pulse" />
+              <div className="text-3xl animate-pulse">💎</div>
               <div className="text-left">
-                <h3 className="text-2xl font-bold text-white">50% OFF with Crypto Payment!</h3>
+                <h3 className="text-2xl font-bold text-white">30% OFF with Crypto Payment!</h3>
                 <p className="text-green-100">Pay with cryptocurrency and save on all ticket packages</p>
               </div>
             </div>
