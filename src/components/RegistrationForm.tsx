@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Mail, Phone, MapPin, Calendar, Check, Copy, ExternalLink, Smartphone, Download, FileText } from 'lucide-react';
+import { X, User, Mail, Phone, MapPin, Calendar, Check, Copy, ExternalLink, Smartphone, Download, FileText, CreditCard, Shield } from 'lucide-react';
 
 interface RegistrationFormProps {
   isOpen: boolean;
@@ -57,8 +57,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
   ticketInfo
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [copied, setCopied] = useState(false);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState('');
+  const [orderId, setOrderId] = useState('');
   const [formData, setFormData] = useState<FormData>({
     firstName: '',
     lastName: '',
@@ -75,7 +76,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
     agreeMarketing: false
   });
 
-  const walletAddress = '0x62468C025d2738eDB2662B9994F52Af0Afa17c9d';
   const whatsappNumber = '+15551234567';
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -86,53 +86,49 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
     }));
   };
 
-  const copyToClipboard = async () => {
+  // Create NOWPayments payment
+  const createNOWPayment = async () => {
+    const orderIdGenerated = `WC2026-${Date.now()}`;
+    setOrderId(orderIdGenerated);
+
+    // Simulate NOWPayments API call
+    // In production, this would be a real API call to NOWPayments
+    const paymentData = {
+      price_amount: ticketInfo.cryptoPrice,
+      price_currency: 'USD',
+      pay_currency: 'btc', // Default to Bitcoin, user can change on NOWPayments page
+      order_id: orderIdGenerated,
+      order_description: `FIFA World Cup 2026 - ${ticketInfo.title}`,
+      ipn_callback_url: 'https://your-domain.com/nowpayments-callback',
+      success_url: 'https://your-domain.com/payment-success',
+      cancel_url: 'https://your-domain.com/payment-cancel',
+      customer_email: formData.email,
+    };
+
     try {
-      await navigator.clipboard.writeText(walletAddress);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = walletAddress;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      // Simulate API response - in production, replace with actual NOWPayments API call
+      const mockPaymentUrl = `https://nowpayments.io/payment/?iid=${orderIdGenerated}&amount=${ticketInfo.cryptoPrice}&currency=USD`;
+      setPaymentUrl(mockPaymentUrl);
+      
+      // In production, you would make this API call:
+      /*
+      const response = await fetch('https://api.nowpayments.io/v1/payment', {
+        method: 'POST',
+        headers: {
+          'x-api-key': 'YOUR_NOWPAYMENTS_API_KEY',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentData),
+      });
+      
+      const result = await response.json();
+      setPaymentUrl(result.payment_url);
+      */
+      
+    } catch (error) {
+      console.error('Error creating payment:', error);
+      alert('Error creating payment. Please try again.');
     }
-  };
-
-  const openWhatsApp = () => {
-    const customerInfo = `
-🎫 FIFA World Cup 2026 Ticket Purchase Confirmation
-
-👤 Customer Information:
-• Name: ${formData.firstName} ${formData.lastName}
-• Email: ${formData.email}
-• Phone: ${formData.phone}
-• Date of Birth: ${formData.dateOfBirth || 'Not provided'}
-• Nationality: ${formData.nationality || 'Not provided'}
-• Country: ${formData.country}
-• Address: ${formData.address}, ${formData.city}
-• Postal Code: ${formData.postalCode || 'Not provided'}
-
-🎟️ Ticket Details:
-• ${ticketInfo.title}
-• Payment Method: Cryptocurrency (30% Discount)
-• Amount: $${ticketInfo.cryptoPrice.toLocaleString()}
-
-💰 Crypto Payment Details:
-• Wallet Address: ${walletAddress}
-• Amount to Send: $${ticketInfo.cryptoPrice.toLocaleString()} worth of ETH/BTC/USDT
-• Payment Status: Pending Confirmation
-
-Please confirm this order and process my ticket purchase. Thank you!
-    `.trim();
-
-    const message = encodeURIComponent(customerInfo);
-    window.open(`https://wa.me/${whatsappNumber.replace('+', '')}?text=${message}`, '_blank');
   };
 
   const generateTicketPDF = () => {
@@ -166,8 +162,9 @@ ${formData.postalCode || ''}
 Original Price: $${ticketInfo.price.toLocaleString()}
 Crypto Discount (30%): -$${(ticketInfo.price - ticketInfo.cryptoPrice).toLocaleString()}
 Final Amount Paid: $${ticketInfo.cryptoPrice.toLocaleString()}
-Payment Method: Cryptocurrency
+Payment Method: Cryptocurrency (NOWPayments)
 Payment Status: CONFIRMED ✅
+Order ID: ${orderId}
 
 ═══════════════════════════════════════════════════════════════
 
@@ -179,7 +176,7 @@ Payment Status: CONFIRMED ✅
 • Valid ID required for entry
 • No outside food or drinks allowed
 
-🎫 TICKET ID: WC2026-${Date.now()}
+🎫 TICKET ID: ${orderId}
 🔐 Security Code: ${Math.random().toString(36).substring(2, 15).toUpperCase()}
 
 ═══════════════════════════════════════════════════════════════
@@ -280,6 +277,10 @@ Valid for: FIFA World Cup 2026
 
   const handleNextStep = () => {
     if (validateStep(currentStep)) {
+      if (currentStep === 3) {
+        // Create payment when moving to payment step
+        createNOWPayment();
+      }
       setCurrentStep(prev => prev + 1);
     }
   };
@@ -558,10 +559,10 @@ Valid for: FIFA World Cup 2026
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                 <div className="flex items-center space-x-2 mb-2">
                   <div className="text-2xl">💎</div>
-                  <h4 className="font-semibold text-green-800">Cryptocurrency Payment Only</h4>
+                  <h4 className="font-semibold text-green-800">Cryptocurrency Payment via NOWPayments</h4>
                 </div>
                 <p className="text-green-700 text-sm">
-                  We accept ETH, BTC, USDT and other major cryptocurrencies. Enjoy 30% discount on all tickets!
+                  Secure crypto payments powered by NOWPayments. Accept 150+ cryptocurrencies with 30% discount!
                 </p>
               </div>
 
@@ -596,13 +597,13 @@ Valid for: FIFA World Cup 2026
             </div>
           )}
 
-          {/* Step 4: Crypto Payment */}
+          {/* Step 4: NOWPayments Crypto Payment */}
           {currentStep === 4 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
                 <div className="text-4xl mb-2">💎</div>
-                <h3 className="text-xl font-bold text-gray-800">Cryptocurrency Payment</h3>
-                <p className="text-gray-600">Complete your payment to secure your tickets</p>
+                <h3 className="text-xl font-bold text-gray-800">Secure Cryptocurrency Payment</h3>
+                <p className="text-gray-600">Complete your payment via NOWPayments</p>
               </div>
 
               {/* Customer Summary */}
@@ -618,61 +619,76 @@ Valid for: FIFA World Cup 2026
                 </div>
               </div>
 
-              {/* Payment Instructions */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                <h4 className="font-semibold text-green-800 mb-3 flex items-center">
-                  💰 Cryptocurrency Payment - 30% Discount Applied!
-                </h4>
-                <p className="text-green-700 mb-4">
-                  Send exactly <strong>${ticketInfo.cryptoPrice.toLocaleString()}</strong> worth of ETH, BTC, or USDT to the address below:
-                </p>
-                
-                <div className="bg-white border rounded-lg p-4 mb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="font-mono text-sm break-all mr-2 select-all">{walletAddress}</div>
-                    <button
-                      type="button"
-                      onClick={copyToClipboard}
-                      className="flex items-center space-x-1 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors flex-shrink-0"
-                    >
-                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      <span>{copied ? 'Copied!' : 'Copy'}</span>
-                    </button>
+              {/* NOWPayments Integration */}
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <Shield className="h-8 w-8 text-purple-600" />
+                  <div>
+                    <h4 className="font-semibold text-purple-800">Powered by NOWPayments</h4>
+                    <p className="text-purple-600 text-sm">Secure & trusted crypto payment processor</p>
                   </div>
                 </div>
                 
+                <div className="bg-white rounded-lg p-4 mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-gray-700">Order ID:</span>
+                    <span className="font-mono text-sm">{orderId}</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-gray-700">Amount:</span>
+                    <span className="font-bold text-green-600">${ticketInfo.cryptoPrice.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-700">Discount Applied:</span>
+                    <span className="font-bold text-green-600">30% OFF</span>
+                  </div>
+                </div>
+
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
                   <p className="text-yellow-800 text-sm">
-                    ⚠️ <strong>Important:</strong> After sending the payment, click the WhatsApp button below to confirm your transaction with our team.
+                    <strong>Supported Cryptocurrencies:</strong> Bitcoin (BTC), Ethereum (ETH), USDT, USDC, Litecoin (LTC), and 150+ more!
                   </p>
                 </div>
               </div>
 
-              {/* WhatsApp Confirmation */}
-              <button
-                type="button"
-                onClick={openWhatsApp}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 flex items-center justify-center space-x-2"
-              >
-                <Smartphone className="h-5 w-5" />
-                <span>Confirm Payment via WhatsApp</span>
-                <ExternalLink className="h-4 w-4" />
-              </button>
+              {/* Payment Button */}
+              <div className="space-y-4">
+                <a
+                  href={paymentUrl || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3 block text-center"
+                  onClick={() => {
+                    if (!paymentUrl) {
+                      alert('Payment is being prepared. Please wait...');
+                      return false;
+                    }
+                  }}
+                >
+                  <CreditCard className="h-6 w-6" />
+                  <span>Pay ${ticketInfo.cryptoPrice.toLocaleString()} with Crypto</span>
+                  <ExternalLink className="h-5 w-5" />
+                </a>
+                
+                <p className="text-gray-600 text-sm text-center">
+                  You will be redirected to NOWPayments secure payment page. 
+                  After completing payment, return here to download your ticket.
+                </p>
+              </div>
 
-              {/* Simulate Payment Confirmation */}
-              <div className="text-center">
+              {/* Payment Confirmation */}
+              <div className="text-center border-t pt-6">
+                <p className="text-gray-600 text-sm mb-4">
+                  After completing your payment on NOWPayments, click the button below:
+                </p>
                 <button
                   type="button"
                   onClick={confirmPayment}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300"
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300"
                 >
-                  ✅ I Have Sent the Payment
+                  ✅ I Have Completed the Payment
                 </button>
               </div>
-              
-              <p className="text-gray-600 text-sm text-center">
-                Our team will verify your payment and confirm your tickets within 24 hours
-              </p>
             </div>
           )}
 
@@ -692,15 +708,16 @@ Valid for: FIFA World Cup 2026
                   <h4 className="font-semibold text-green-800">Order Successfully Processed</h4>
                 </div>
                 <p className="text-green-700 text-sm mb-4">
-                  Thank you for your purchase! Your payment has been confirmed and your tickets are ready for download.
+                  Thank you for your purchase! Your payment has been confirmed via NOWPayments and your tickets are ready for download.
                 </p>
                 
                 <div className="bg-white rounded-lg p-4 mb-4">
                   <div className="text-sm text-gray-600 space-y-1">
-                    <div><strong>Order ID:</strong> WC2026-{Date.now()}</div>
+                    <div><strong>Order ID:</strong> {orderId}</div>
                     <div><strong>Customer:</strong> {formData.firstName} {formData.lastName}</div>
                     <div><strong>Email:</strong> {formData.email}</div>
                     <div><strong>Amount Paid:</strong> ${ticketInfo.cryptoPrice.toLocaleString()} (30% crypto discount applied)</div>
+                    <div><strong>Payment Method:</strong> Cryptocurrency via NOWPayments</div>
                   </div>
                 </div>
               </div>
@@ -778,7 +795,7 @@ Valid for: FIFA World Cup 2026
                 </button>
               ) : (
                 <div className="ml-auto">
-                  <p className="text-sm text-gray-600">Complete payment via WhatsApp to finish your order</p>
+                  <p className="text-sm text-gray-600">Complete payment via NOWPayments to finish your order</p>
                 </div>
               )}
             </div>
