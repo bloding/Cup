@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Mail, Phone, MapPin, Calendar, CreditCard, Check, Copy, ExternalLink } from 'lucide-react';
+import { X, User, Mail, Phone, MapPin, Calendar, CreditCard, Check, Copy, ExternalLink, Smartphone } from 'lucide-react';
 
 interface RegistrationFormProps {
   isOpen: boolean;
@@ -64,56 +64,122 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
     }));
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(walletAddress);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(walletAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = walletAddress;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const openWhatsApp = () => {
     const customerInfo = `
-Name: ${formData.firstName} ${formData.lastName}
-Email: ${formData.email}
-Phone: ${formData.phone}
-Country: ${formData.country}
-Ticket: ${ticketInfo.title}
-Payment Method: ${formData.paymentMethod === 'crypto' ? 'Cryptocurrency' : 'Credit Card'}
-Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticketInfo.price}
+🎫 FIFA World Cup 2026 Ticket Purchase Confirmation
+
+👤 Customer Information:
+• Name: ${formData.firstName} ${formData.lastName}
+• Email: ${formData.email}
+• Phone: ${formData.phone}
+• Country: ${formData.country}
+• Address: ${formData.address}, ${formData.city}
+
+🎟️ Ticket Details:
+• ${ticketInfo.title}
+• Payment Method: ${formData.paymentMethod === 'crypto' ? 'Cryptocurrency (50% Discount)' : 'Credit Card'}
+• Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticketInfo.price}
+
+${formData.paymentMethod === 'crypto' ? 
+`💰 Crypto Payment Details:
+• Wallet Address: ${walletAddress}
+• Amount to Send: $${ticketInfo.cryptoPrice} worth of ETH/BTC/USDT
+• Payment Status: Pending Confirmation` : 
+`💳 Credit Card Payment:
+• Amount: $${ticketInfo.price}
+• Payment Status: Awaiting Processing`}
+
+Please confirm this order and process my ticket purchase. Thank you!
     `.trim();
 
-    const message = encodeURIComponent(
-      `Hello! I want to confirm my ticket purchase with the following details:\n\n${customerInfo}`
-    );
+    const message = encodeURIComponent(customerInfo);
     window.open(`https://wa.me/${whatsappNumber.replace('+', '')}?text=${message}`, '_blank');
   };
 
+  const validateStep = (step: number): boolean => {
+    switch (step) {
+      case 1:
+        if (!formData.firstName.trim()) {
+          alert('Please enter your first name');
+          return false;
+        }
+        if (!formData.lastName.trim()) {
+          alert('Please enter your last name');
+          return false;
+        }
+        if (!formData.email.trim()) {
+          alert('Please enter your email address');
+          return false;
+        }
+        if (!formData.confirmEmail.trim()) {
+          alert('Please confirm your email address');
+          return false;
+        }
+        if (formData.email !== formData.confirmEmail) {
+          alert('Email addresses do not match');
+          return false;
+        }
+        if (!formData.phone.trim()) {
+          alert('Please enter your phone number');
+          return false;
+        }
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+          alert('Please enter a valid email address');
+          return false;
+        }
+        return true;
+      
+      case 2:
+        if (!formData.address.trim()) {
+          alert('Please enter your street address');
+          return false;
+        }
+        if (!formData.city.trim()) {
+          alert('Please enter your city');
+          return false;
+        }
+        if (!formData.country.trim()) {
+          alert('Please select your country');
+          return false;
+        }
+        return true;
+      
+      case 3:
+        if (!formData.agreeTerms) {
+          alert('Please agree to the terms and conditions to continue');
+          return false;
+        }
+        return true;
+      
+      default:
+        return true;
+    }
+  };
+
   const handleNextStep = () => {
-    if (currentStep === 1) {
-      // Validate personal info
-      if (!formData.firstName || !formData.lastName || !formData.email || !formData.confirmEmail || !formData.phone) {
-        alert('Please fill in all required personal information fields');
-        return;
-      }
-      if (formData.email !== formData.confirmEmail) {
-        alert('Email addresses do not match');
-        return;
-      }
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => prev + 1);
     }
-    if (currentStep === 2) {
-      // Validate address info
-      if (!formData.address || !formData.city || !formData.country) {
-        alert('Please fill in all required address fields');
-        return;
-      }
-    }
-    if (currentStep === 3) {
-      // Validate terms
-      if (!formData.agreeTerms) {
-        alert('Please agree to the terms and conditions');
-        return;
-      }
-    }
-    setCurrentStep(prev => prev + 1);
   };
 
   const handlePrevStep = () => {
@@ -179,6 +245,7 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
                     value={formData.firstName}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter your first name"
                     required
                   />
                 </div>
@@ -192,6 +259,7 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
                     value={formData.lastName}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter your last name"
                     required
                   />
                 </div>
@@ -207,6 +275,7 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
                   value={formData.email}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter your email address"
                   required
                 />
               </div>
@@ -221,8 +290,12 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
                   value={formData.confirmEmail}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Confirm your email address"
                   required
                 />
+                {formData.confirmEmail && formData.email !== formData.confirmEmail && (
+                  <p className="text-red-500 text-sm mt-1">Email addresses do not match</p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -236,6 +309,7 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
                     value={formData.phone}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="+1 (555) 123-4567"
                     required
                   />
                 </div>
@@ -303,6 +377,7 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
                   value={formData.address}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter your street address"
                   required
                 />
               </div>
@@ -318,6 +393,7 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
                     value={formData.city}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter your city"
                     required
                   />
                 </div>
@@ -331,6 +407,7 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
                     value={formData.postalCode}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter postal code"
                   />
                 </div>
               </div>
@@ -380,13 +457,14 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
                 <h4 className="font-semibold text-gray-800 mb-2">Order Summary</h4>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">{ticketInfo.title}</span>
-                  <span className="font-bold text-gray-800">${ticketInfo.price}</span>
+                  <span className="font-bold text-gray-800">${ticketInfo.price.toLocaleString()}</span>
                 </div>
               </div>
 
               {/* Payment Method Selection */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
+                  type="button"
                   onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'crypto' }))}
                   className={`p-6 rounded-lg border-2 transition-all duration-200 ${
                     formData.paymentMethod === 'crypto'
@@ -398,11 +476,12 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
                     <div className="text-3xl mb-3">💎</div>
                     <div className="font-semibold text-lg">Cryptocurrency</div>
                     <div className="text-sm text-green-600 font-bold mb-2">50% DISCOUNT!</div>
-                    <div className="text-2xl font-bold">${ticketInfo.cryptoPrice}</div>
+                    <div className="text-2xl font-bold">${ticketInfo.cryptoPrice.toLocaleString()}</div>
                     <div className="text-xs text-gray-500 mt-1">ETH, BTC, USDT accepted</div>
                   </div>
                 </button>
                 <button
+                  type="button"
                   onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'card' }))}
                   className={`p-6 rounded-lg border-2 transition-all duration-200 ${
                     formData.paymentMethod === 'card'
@@ -414,7 +493,7 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
                     <CreditCard className="h-12 w-12 mx-auto mb-3" />
                     <div className="font-semibold text-lg">Credit Card</div>
                     <div className="text-sm text-gray-500 mb-2">Regular Price</div>
-                    <div className="text-2xl font-bold">${ticketInfo.price}</div>
+                    <div className="text-2xl font-bold">${ticketInfo.price.toLocaleString()}</div>
                     <div className="text-xs text-gray-500 mt-1">Visa, Mastercard, Amex</div>
                   </div>
                 </button>
@@ -422,7 +501,7 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
 
               {/* Terms and Conditions */}
               <div className="space-y-3">
-                <label className="flex items-start space-x-3">
+                <label className="flex items-start space-x-3 cursor-pointer">
                   <input
                     type="checkbox"
                     name="agreeTerms"
@@ -435,7 +514,7 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
                     I agree to the <a href="#" className="text-blue-600 hover:underline">Terms and Conditions</a> and <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a> *
                   </span>
                 </label>
-                <label className="flex items-start space-x-3">
+                <label className="flex items-start space-x-3 cursor-pointer">
                   <input
                     type="checkbox"
                     name="agreeMarketing"
@@ -478,15 +557,16 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
                     💰 Cryptocurrency Payment - 50% Discount Applied!
                   </h4>
                   <p className="text-green-700 mb-4">
-                    Send exactly <strong>${ticketInfo.cryptoPrice}</strong> worth of ETH, BTC, or USDT to the address below:
+                    Send exactly <strong>${ticketInfo.cryptoPrice.toLocaleString()}</strong> worth of ETH, BTC, or USDT to the address below:
                   </p>
                   
                   <div className="bg-white border rounded-lg p-4 mb-4">
                     <div className="flex items-center justify-between">
-                      <div className="font-mono text-sm break-all mr-2">{walletAddress}</div>
+                      <div className="font-mono text-sm break-all mr-2 select-all">{walletAddress}</div>
                       <button
+                        type="button"
                         onClick={copyToClipboard}
-                        className="flex items-center space-x-1 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors"
+                        className="flex items-center space-x-1 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors flex-shrink-0"
                       >
                         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                         <span>{copied ? 'Copied!' : 'Copy'}</span>
@@ -506,16 +586,17 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
                   <p className="text-blue-700 mb-4">
                     Contact us via WhatsApp to process your credit card payment securely.
                   </p>
-                  <div className="text-2xl font-bold text-blue-800">Total: ${ticketInfo.price}</div>
+                  <div className="text-2xl font-bold text-blue-800">Total: ${ticketInfo.price.toLocaleString()}</div>
                 </div>
               )}
 
               {/* WhatsApp Confirmation */}
               <button
+                type="button"
                 onClick={openWhatsApp}
                 className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 flex items-center justify-center space-x-2"
               >
-                <Phone className="h-5 w-5" />
+                <Smartphone className="h-5 w-5" />
                 <span>Confirm Payment via WhatsApp</span>
                 <ExternalLink className="h-4 w-4" />
               </button>
@@ -529,6 +610,7 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
           <div className="flex justify-between mt-8 pt-6 border-t">
             {currentStep > 1 && (
               <button
+                type="button"
                 onClick={handlePrevStep}
                 className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
@@ -537,6 +619,7 @@ Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticket
             )}
             {currentStep < 4 ? (
               <button
+                type="button"
                 onClick={handleNextStep}
                 className="ml-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
