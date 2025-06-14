@@ -1,17 +1,24 @@
 import React, { useState } from 'react';
 import { Check, Star, CreditCard } from 'lucide-react';
 import { Package } from '../data/packages';
-import PaymentModal from './PaymentModal';
+import RegistrationForm from './RegistrationForm';
 
 interface PackageCardProps {
   package: Package;
 }
 
 const PackageCard: React.FC<PackageCardProps> = ({ package: pkg }) => {
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isRegistrationFormOpen, setIsRegistrationFormOpen] = useState(false);
 
   const handleBookNow = () => {
-    setIsPaymentModalOpen(true);
+    setIsRegistrationFormOpen(true);
+  };
+
+  const ticketInfo = {
+    type: 'package' as const,
+    title: pkg.name,
+    price: pkg.price,
+    cryptoPrice: Math.round(pkg.price * 0.5)
   };
 
   return (
@@ -63,11 +70,10 @@ const PackageCard: React.FC<PackageCardProps> = ({ package: pkg }) => {
         </div>
       </div>
 
-      <PaymentModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        package={pkg}
-        price={pkg.price}
+      <RegistrationForm
+        isOpen={isRegistrationFormOpen}
+        onClose={() => setIsRegistrationFormOpen(false)}
+        ticketInfo={ticketInfo}
       />
     </>
   );

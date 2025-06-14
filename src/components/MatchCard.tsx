@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, MapPin, Clock, Users, CreditCard } from 'lucide-react';
 import { Match } from '../data/matches';
-import PaymentModal from './PaymentModal';
+import RegistrationForm from './RegistrationForm';
 
 interface MatchCardProps {
   match: Match;
@@ -9,7 +9,7 @@ interface MatchCardProps {
 
 const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
   const [selectedCategory, setSelectedCategory] = useState<keyof Match['prices']>('category3');
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isRegistrationFormOpen, setIsRegistrationFormOpen] = useState(false);
 
   const categoryLabels = {
     category1: 'Category 1 - Premium',
@@ -28,7 +28,14 @@ const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
   };
 
   const handleBookNow = () => {
-    setIsPaymentModalOpen(true);
+    setIsRegistrationFormOpen(true);
+  };
+
+  const ticketInfo = {
+    type: 'match' as const,
+    title: `${match.homeTeam} vs ${match.awayTeam} - ${categoryLabels[selectedCategory]}`,
+    price: match.prices[selectedCategory],
+    cryptoPrice: Math.round(match.prices[selectedCategory] * 0.5)
   };
 
   return (
@@ -120,12 +127,10 @@ const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
         </div>
       </div>
 
-      <PaymentModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        match={match}
-        selectedCategory={selectedCategory}
-        price={match.prices[selectedCategory]}
+      <RegistrationForm
+        isOpen={isRegistrationFormOpen}
+        onClose={() => setIsRegistrationFormOpen(false)}
+        ticketInfo={ticketInfo}
       />
     </>
   );
