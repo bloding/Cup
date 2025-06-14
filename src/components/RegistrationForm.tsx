@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Mail, Phone, MapPin, Calendar, Check, Copy, ExternalLink, Smartphone } from 'lucide-react';
+import { X, User, Mail, Phone, MapPin, Calendar, Check, Copy, ExternalLink, Smartphone, Download, FileText } from 'lucide-react';
 
 interface RegistrationFormProps {
   isOpen: boolean;
@@ -58,6 +58,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [copied, setCopied] = useState(false);
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     firstName: '',
     lastName: '',
@@ -132,6 +133,87 @@ Please confirm this order and process my ticket purchase. Thank you!
 
     const message = encodeURIComponent(customerInfo);
     window.open(`https://wa.me/${whatsappNumber.replace('+', '')}?text=${message}`, '_blank');
+  };
+
+  const generateTicketPDF = () => {
+    // Generate ticket content
+    const ticketContent = `
+FIFA WORLD CUP 2026 - OFFICIAL TICKET
+
+═══════════════════════════════════════════════════════════════
+
+🏆 ${ticketInfo.title}
+📅 Tournament: FIFA World Cup 2026
+🌍 Host Countries: USA, Canada & Mexico
+
+═══════════════════════════════════════════════════════════════
+
+👤 TICKET HOLDER INFORMATION:
+Name: ${formData.firstName} ${formData.lastName}
+Email: ${formData.email}
+Phone: ${formData.phone}
+Nationality: ${formData.nationality || 'Not specified'}
+Date of Birth: ${formData.dateOfBirth || 'Not specified'}
+
+📍 ADDRESS:
+${formData.address}
+${formData.city}, ${formData.country}
+${formData.postalCode || ''}
+
+═══════════════════════════════════════════════════════════════
+
+💰 PAYMENT INFORMATION:
+Original Price: $${ticketInfo.price.toLocaleString()}
+Crypto Discount (30%): -$${(ticketInfo.price - ticketInfo.cryptoPrice).toLocaleString()}
+Final Amount Paid: $${ticketInfo.cryptoPrice.toLocaleString()}
+Payment Method: Cryptocurrency
+Payment Status: CONFIRMED ✅
+
+═══════════════════════════════════════════════════════════════
+
+📋 IMPORTANT INFORMATION:
+• This is your official FIFA World Cup 2026 ticket
+• Present this ticket at the stadium entrance
+• Ticket is non-transferable and non-refundable
+• Arrive at least 2 hours before match time
+• Valid ID required for entry
+• No outside food or drinks allowed
+
+🎫 TICKET ID: WC2026-${Date.now()}
+🔐 Security Code: ${Math.random().toString(36).substring(2, 15).toUpperCase()}
+
+═══════════════════════════════════════════════════════════════
+
+📞 CUSTOMER SUPPORT:
+Phone: +1 (555) 123-4567
+WhatsApp: ${whatsappNumber}
+Email: tickets@worldcup2026.com
+
+🌐 Official Website: FIFA World Cup 2026 Ticket Portal
+
+═══════════════════════════════════════════════════════════════
+
+Generated on: ${new Date().toLocaleString()}
+Valid for: FIFA World Cup 2026
+
+⚠️ KEEP THIS TICKET SAFE - IT'S YOUR ENTRY TO THE MATCH! ⚠️
+    `;
+
+    // Create and download the ticket file
+    const blob = new Blob([ticketContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `FIFA_WorldCup_2026_Ticket_${formData.firstName}_${formData.lastName}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const confirmPayment = () => {
+    setPaymentConfirmed(true);
+    setCurrentStep(5); // Move to final step
   };
 
   const validateStep = (step: number): boolean => {
@@ -214,7 +296,9 @@ Please confirm this order and process my ticket purchase. Thank you!
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-t-2xl">
           <div>
-            <h2 className="text-2xl font-bold">Complete Your Registration</h2>
+            <h2 className="text-2xl font-bold">
+              {currentStep === 5 ? 'Payment Confirmed!' : 'Complete Your Registration'}
+            </h2>
             <p className="text-blue-200 text-sm">{ticketInfo.title}</p>
           </div>
           <button
@@ -226,23 +310,25 @@ Please confirm this order and process my ticket purchase. Thank you!
         </div>
 
         {/* Progress Bar */}
-        <div className="px-6 py-4 bg-gray-50">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-600">Step {currentStep} of 4</span>
-            <span className="text-sm text-gray-500">
-              {currentStep === 1 && 'Personal Information'}
-              {currentStep === 2 && 'Address Details'}
-              {currentStep === 3 && 'Terms & Conditions'}
-              {currentStep === 4 && 'Crypto Payment'}
-            </span>
+        {currentStep < 5 && (
+          <div className="px-6 py-4 bg-gray-50">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-600">Step {currentStep} of 4</span>
+              <span className="text-sm text-gray-500">
+                {currentStep === 1 && 'Personal Information'}
+                {currentStep === 2 && 'Address Details'}
+                {currentStep === 3 && 'Terms & Conditions'}
+                {currentStep === 4 && 'Crypto Payment'}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(currentStep / 4) * 100}%` }}
+              ></div>
+            </div>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(currentStep / 4) * 100}%` }}
-            ></div>
-          </div>
-        </div>
+        )}
 
         <div className="p-6">
           {/* Step 1: Personal Information */}
@@ -572,37 +658,131 @@ Please confirm this order and process my ticket purchase. Thank you!
                 <span>Confirm Payment via WhatsApp</span>
                 <ExternalLink className="h-4 w-4" />
               </button>
+
+              {/* Simulate Payment Confirmation */}
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={confirmPayment}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300"
+                >
+                  ✅ I Have Sent the Payment
+                </button>
+              </div>
+              
               <p className="text-gray-600 text-sm text-center">
-                Our team will verify your payment and send you the tickets within 24 hours
+                Our team will verify your payment and confirm your tickets within 24 hours
               </p>
             </div>
           )}
 
-          {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8 pt-6 border-t">
-            {currentStep > 1 && (
-              <button
-                type="button"
-                onClick={handlePrevStep}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Previous
-              </button>
-            )}
-            {currentStep < 4 ? (
-              <button
-                type="button"
-                onClick={handleNextStep}
-                className="ml-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Next
-              </button>
-            ) : (
-              <div className="ml-auto">
-                <p className="text-sm text-gray-600">Complete payment via WhatsApp to finish your order</p>
+          {/* Step 5: Payment Confirmed & Ticket Download */}
+          {currentStep === 5 && (
+            <div className="space-y-6 text-center">
+              <div className="mb-6">
+                <div className="text-6xl mb-4">🎉</div>
+                <h3 className="text-2xl font-bold text-green-600 mb-2">Payment Confirmed!</h3>
+                <p className="text-gray-600">Your FIFA World Cup 2026 tickets have been secured</p>
               </div>
-            )}
-          </div>
+
+              {/* Success Message */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <div className="flex items-center justify-center space-x-2 mb-3">
+                  <Check className="h-6 w-6 text-green-600" />
+                  <h4 className="font-semibold text-green-800">Order Successfully Processed</h4>
+                </div>
+                <p className="text-green-700 text-sm mb-4">
+                  Thank you for your purchase! Your payment has been confirmed and your tickets are ready for download.
+                </p>
+                
+                <div className="bg-white rounded-lg p-4 mb-4">
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <div><strong>Order ID:</strong> WC2026-{Date.now()}</div>
+                    <div><strong>Customer:</strong> {formData.firstName} {formData.lastName}</div>
+                    <div><strong>Email:</strong> {formData.email}</div>
+                    <div><strong>Amount Paid:</strong> ${ticketInfo.cryptoPrice.toLocaleString()} (30% crypto discount applied)</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Download Ticket Button */}
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={generateTicketPDF}
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3"
+                >
+                  <Download className="h-6 w-6" />
+                  <span>Download Your Ticket</span>
+                  <FileText className="h-6 w-6" />
+                </button>
+                
+                <p className="text-gray-600 text-sm">
+                  Your official FIFA World Cup 2026 ticket will be downloaded as a text file. 
+                  Please keep it safe and present it at the stadium entrance.
+                </p>
+              </div>
+
+              {/* Additional Information */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-800 mb-2">Important Information:</h4>
+                <ul className="text-blue-700 text-sm space-y-1 text-left">
+                  <li>• Your ticket has been sent to your email address</li>
+                  <li>• Arrive at the stadium at least 2 hours before match time</li>
+                  <li>• Bring a valid ID that matches the ticket holder name</li>
+                  <li>• Tickets are non-transferable and non-refundable</li>
+                  <li>• Contact our support team if you have any questions</li>
+                </ul>
+              </div>
+
+              {/* Contact Support */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-800 mb-2">Need Help?</h4>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <div>📞 Phone: +1 (555) 123-4567</div>
+                  <div>📱 WhatsApp: {whatsappNumber}</div>
+                  <div>📧 Email: tickets@worldcup2026.com</div>
+                </div>
+              </div>
+
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={onClose}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300"
+              >
+                Close
+              </button>
+            </div>
+          )}
+
+          {/* Navigation Buttons */}
+          {currentStep < 5 && (
+            <div className="flex justify-between mt-8 pt-6 border-t">
+              {currentStep > 1 && (
+                <button
+                  type="button"
+                  onClick={handlePrevStep}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Previous
+                </button>
+              )}
+              {currentStep < 4 ? (
+                <button
+                  type="button"
+                  onClick={handleNextStep}
+                  className="ml-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Next
+                </button>
+              ) : (
+                <div className="ml-auto">
+                  <p className="text-sm text-gray-600">Complete payment via WhatsApp to finish your order</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
