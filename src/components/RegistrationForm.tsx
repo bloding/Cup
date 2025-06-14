@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Mail, Phone, MapPin, Calendar, Check, Copy, ExternalLink, Smartphone, Download, FileText, CreditCard, Shield } from 'lucide-react';
+import { X, User, Mail, Phone, MapPin, Calendar, Check, Copy, ExternalLink, Smartphone, Download, FileText, CreditCard, Shield, Info, DollarSign } from 'lucide-react';
 
 interface RegistrationFormProps {
   isOpen: boolean;
@@ -60,6 +60,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState('');
   const [orderId, setOrderId] = useState('');
+  const [showFeeBreakdown, setShowFeeBreakdown] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     firstName: '',
     lastName: '',
@@ -78,6 +79,39 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
   const whatsappNumber = '+15551234567';
 
+  // NOWPayments fee structure
+  const nowPaymentsFees = {
+    processingFee: 0.5, // 0.5% processing fee
+    networkFee: {
+      BTC: 0.0005, // ~$15-30 depending on BTC price
+      ETH: 0.003, // ~$5-15 depending on ETH price
+      USDT: 1.0, // Fixed $1 for USDT
+      USDC: 1.0, // Fixed $1 for USDC
+      LTC: 0.001, // ~$0.1-0.5 depending on LTC price
+    },
+    minimumAmount: 1, // $1 minimum
+    exchangeRate: 0.25 // 0.25% exchange rate margin
+  };
+
+  // Calculate total fees
+  const calculateFees = () => {
+    const processingFee = ticketInfo.cryptoPrice * (nowPaymentsFees.processingFee / 100);
+    const exchangeFee = ticketInfo.cryptoPrice * (nowPaymentsFees.exchangeRate / 100);
+    const estimatedNetworkFee = 2; // Average network fee estimate
+    const totalFees = processingFee + exchangeFee + estimatedNetworkFee;
+    const finalAmount = ticketInfo.cryptoPrice + totalFees;
+    
+    return {
+      processingFee,
+      exchangeFee,
+      networkFee: estimatedNetworkFee,
+      totalFees,
+      finalAmount
+    };
+  };
+
+  const fees = calculateFees();
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
@@ -94,7 +128,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
     // Simulate NOWPayments API call
     // In production, this would be a real API call to NOWPayments
     const paymentData = {
-      price_amount: ticketInfo.cryptoPrice,
+      price_amount: fees.finalAmount, // Include fees in the final amount
       price_currency: 'USD',
       pay_currency: 'btc', // Default to Bitcoin, user can change on NOWPayments page
       order_id: orderIdGenerated,
@@ -107,7 +141,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
     try {
       // Simulate API response - in production, replace with actual NOWPayments API call
-      const mockPaymentUrl = `https://nowpayments.io/payment/?iid=${orderIdGenerated}&amount=${ticketInfo.cryptoPrice}&currency=USD`;
+      const mockPaymentUrl = `https://nowpayments.io/payment/?iid=${orderIdGenerated}&amount=${fees.finalAmount}&currency=USD`;
       setPaymentUrl(mockPaymentUrl);
       
       // In production, you would make this API call:
@@ -161,7 +195,15 @@ ${formData.postalCode || ''}
 💰 PAYMENT INFORMATION:
 Original Price: $${ticketInfo.price.toLocaleString()}
 Crypto Discount (30%): -$${(ticketInfo.price - ticketInfo.cryptoPrice).toLocaleString()}
-Final Amount Paid: $${ticketInfo.cryptoPrice.toLocaleString()}
+Ticket Amount: $${ticketInfo.cryptoPrice.toLocaleString()}
+
+NOWPayments Fees:
+• Processing Fee (0.5%): $${fees.processingFee.toFixed(2)}
+• Exchange Rate Fee (0.25%): $${fees.exchangeFee.toFixed(2)}
+• Network Fee (estimated): $${fees.networkFee.toFixed(2)}
+• Total Fees: $${fees.totalFees.toFixed(2)}
+
+Final Amount Paid: $${fees.finalAmount.toFixed(2)}
 Payment Method: Cryptocurrency (NOWPayments)
 Payment Status: CONFIRMED ✅
 Order ID: ${orderId}
@@ -549,7 +591,7 @@ Valid for: FIFA World Cup 2026
                     <span className="font-bold">-${(ticketInfo.price - ticketInfo.cryptoPrice).toLocaleString()}</span>
                   </div>
                   <div className="border-t pt-2 flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-800">Total (Crypto Payment)</span>
+                    <span className="text-lg font-bold text-gray-800">Subtotal</span>
                     <span className="text-xl font-bold text-green-600">${ticketInfo.cryptoPrice.toLocaleString()}</span>
                   </div>
                 </div>
@@ -629,18 +671,67 @@ Valid for: FIFA World Cup 2026
                   </div>
                 </div>
                 
+                {/* Payment Breakdown */}
                 <div className="bg-white rounded-lg p-4 mb-4">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-gray-700">Order ID:</span>
                     <span className="font-mono text-sm">{orderId}</span>
                   </div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-700">Amount:</span>
+                    <span className="text-gray-700">Ticket Amount:</span>
                     <span className="font-bold text-green-600">${ticketInfo.cryptoPrice.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-700">Discount Applied:</span>
-                    <span className="font-bold text-green-600">30% OFF</span>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-gray-700">Crypto Discount:</span>
+                    <span className="font-bold text-green-600">30% OFF Applied</span>
+                  </div>
+                  
+                  {/* Fee Breakdown Toggle */}
+                  <div className="border-t pt-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowFeeBreakdown(!showFeeBreakdown)}
+                      className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 text-sm"
+                    >
+                      <DollarSign className="h-4 w-4" />
+                      <span>NOWPayments Fees & Final Amount</span>
+                      <Info className="h-4 w-4" />
+                    </button>
+                    
+                    {showFeeBreakdown && (
+                      <div className="mt-3 bg-gray-50 rounded-lg p-3 text-sm">
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Processing Fee (0.5%):</span>
+                            <span className="text-gray-800">${fees.processingFee.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Exchange Rate Fee (0.25%):</span>
+                            <span className="text-gray-800">${fees.exchangeFee.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Network Fee (estimated):</span>
+                            <span className="text-gray-800">${fees.networkFee.toFixed(2)}</span>
+                          </div>
+                          <div className="border-t pt-2 flex justify-between font-semibold">
+                            <span className="text-gray-700">Total NOWPayments Fees:</span>
+                            <span className="text-red-600">${fees.totalFees.toFixed(2)}</span>
+                          </div>
+                          <div className="border-t pt-2 flex justify-between font-bold text-lg">
+                            <span className="text-gray-800">Final Amount to Pay:</span>
+                            <span className="text-blue-600">${fees.finalAmount.toFixed(2)}</span>
+                          </div>
+                        </div>
+                        
+                        {/* Fee Information */}
+                        <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                          <p className="text-yellow-800">
+                            <strong>ℹ️ Fee Information:</strong> NOWPayments charges industry-standard fees for secure crypto processing. 
+                            Network fees vary by cryptocurrency and network congestion. Final amount includes all fees.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -666,7 +757,7 @@ Valid for: FIFA World Cup 2026
                   }}
                 >
                   <CreditCard className="h-6 w-6" />
-                  <span>Pay ${ticketInfo.cryptoPrice.toLocaleString()} with Crypto</span>
+                  <span>Pay ${fees.finalAmount.toFixed(2)} with Crypto</span>
                   <ExternalLink className="h-5 w-5" />
                 </a>
                 
@@ -716,7 +807,9 @@ Valid for: FIFA World Cup 2026
                     <div><strong>Order ID:</strong> {orderId}</div>
                     <div><strong>Customer:</strong> {formData.firstName} {formData.lastName}</div>
                     <div><strong>Email:</strong> {formData.email}</div>
-                    <div><strong>Amount Paid:</strong> ${ticketInfo.cryptoPrice.toLocaleString()} (30% crypto discount applied)</div>
+                    <div><strong>Ticket Amount:</strong> ${ticketInfo.cryptoPrice.toLocaleString()} (30% crypto discount applied)</div>
+                    <div><strong>NOWPayments Fees:</strong> ${fees.totalFees.toFixed(2)}</div>
+                    <div><strong>Total Paid:</strong> ${fees.finalAmount.toFixed(2)}</div>
                     <div><strong>Payment Method:</strong> Cryptocurrency via NOWPayments</div>
                   </div>
                 </div>
