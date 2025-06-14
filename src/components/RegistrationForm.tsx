@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Mail, Phone, MapPin, Calendar, Check, Copy, ExternalLink, Smartphone, Download, FileText, CreditCard, Shield, Info, DollarSign } from 'lucide-react';
+import { X, User, Mail, Phone, MapPin, Calendar, Check, Copy, ExternalLink, Smartphone, Download, FileText, CreditCard, Shield, Info, DollarSign, Wallet } from 'lucide-react';
 
 interface RegistrationFormProps {
   isOpen: boolean;
@@ -51,6 +51,24 @@ const countries = [
   'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe'
 ];
 
+// Wallet addresses for receiving payments
+const WALLET_ADDRESSES = {
+  ETH: '0x62468C025d2738eDB2662B9994F52Af0Afa17c9d',
+  BTC: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
+  USDT: '0x62468C025d2738eDB2662B9994F52Af0Afa17c9d',
+  USDC: '0x62468C025d2738eDB2662B9994F52Af0Afa17c9d',
+  BNB: '0x62468C025d2738eDB2662B9994F52Af0Afa17c9d'
+};
+
+// Crypto prices (in USD)
+const CRYPTO_PRICES = {
+  ETH: 2500,
+  BTC: 45000,
+  USDT: 1,
+  USDC: 1,
+  BNB: 300
+};
+
 const RegistrationForm: React.FC<RegistrationFormProps> = ({
   isOpen,
   onClose,
@@ -58,9 +76,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
-  const [paymentUrl, setPaymentUrl] = useState('');
   const [orderId, setOrderId] = useState('');
-  const [showFeeBreakdown, setShowFeeBreakdown] = useState(false);
+  const [selectedCrypto, setSelectedCrypto] = useState<keyof typeof CRYPTO_PRICES>('ETH');
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [connectedWallet, setConnectedWallet] = useState('');
+  const [walletAddress, setWalletAddress] = useState('');
+  const [transactionHash, setTransactionHash] = useState('');
+  const [paymentSent, setPaymentSent] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     firstName: '',
     lastName: '',
@@ -79,38 +101,100 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
   const whatsappNumber = '+15551234567';
 
-  // NOWPayments fee structure
-  const nowPaymentsFees = {
-    processingFee: 0.5, // 0.5% processing fee
-    networkFee: {
-      BTC: 0.0005, // ~$15-30 depending on BTC price
-      ETH: 0.003, // ~$5-15 depending on ETH price
-      USDT: 1.0, // Fixed $1 for USDT
-      USDC: 1.0, // Fixed $1 for USDC
-      LTC: 0.001, // ~$0.1-0.5 depending on LTC price
-    },
-    minimumAmount: 1, // $1 minimum
-    exchangeRate: 0.25 // 0.25% exchange rate margin
+  // Calculate crypto amount
+  const calculateCryptoAmount = (currency: keyof typeof CRYPTO_PRICES) => {
+    return (ticketInfo.cryptoPrice / CRYPTO_PRICES[currency]).toFixed(8);
   };
 
-  // Calculate total fees
-  const calculateFees = () => {
-    const processingFee = ticketInfo.cryptoPrice * (nowPaymentsFees.processingFee / 100);
-    const exchangeFee = ticketInfo.cryptoPrice * (nowPaymentsFees.exchangeRate / 100);
-    const estimatedNetworkFee = 2; // Average network fee estimate
-    const totalFees = processingFee + exchangeFee + estimatedNetworkFee;
-    const finalAmount = ticketInfo.cryptoPrice + totalFees;
-    
-    return {
-      processingFee,
-      exchangeFee,
-      networkFee: estimatedNetworkFee,
-      totalFees,
-      finalAmount
-    };
+  // Connect to MetaMask
+  const connectMetaMask = async () => {
+    try {
+      if (typeof window.ethereum !== 'undefined') {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (accounts.length > 0) {
+          setWalletConnected(true);
+          setConnectedWallet('MetaMask');
+          setWalletAddress(accounts[0]);
+          
+          // Copy wallet address to clipboard
+          await navigator.clipboard.writeText(WALLET_ADDRESSES[selectedCrypto]);
+          alert(`✅ MetaMask متصل بنجاح!\n📋 تم نسخ عنوان المحفظة: ${WALLET_ADDRESSES[selectedCrypto]}\n\nيمكنك الآن إرسال ${calculateCryptoAmount(selectedCrypto)} ${selectedCrypto} إلى العنوان المنسوخ`);
+        }
+      } else {
+        alert('❌ MetaMask غير مثبت. يرجى تثبيت MetaMask أولاً.');
+        window.open('https://metamask.io/download/', '_blank');
+      }
+    } catch (error) {
+      console.error('Error connecting to MetaMask:', error);
+      alert('❌ خطأ في الاتصال بـ MetaMask. يرجى المحاولة مرة أخرى.');
+    }
   };
 
-  const fees = calculateFees();
+  // Connect to Trust Wallet
+  const connectTrustWallet = async () => {
+    try {
+      // Check if Trust Wallet is available
+      if (typeof window.ethereum !== 'undefined' && window.ethereum.isTrust) {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (accounts.length > 0) {
+          setWalletConnected(true);
+          setConnectedWallet('Trust Wallet');
+          setWalletAddress(accounts[0]);
+          
+          // Copy wallet address to clipboard
+          await navigator.clipboard.writeText(WALLET_ADDRESSES[selectedCrypto]);
+          alert(`✅ Trust Wallet متصل بنجاح!\n📋 تم نسخ عنوان المحفظة: ${WALLET_ADDRESSES[selectedCrypto]}\n\nيمكنك الآن إرسال ${calculateCryptoAmount(selectedCrypto)} ${selectedCrypto} إلى العنوان المنسوخ`);
+        }
+      } else {
+        // Fallback: Copy address and show instructions
+        await navigator.clipboard.writeText(WALLET_ADDRESSES[selectedCrypto]);
+        alert(`📱 لاستخدام Trust Wallet:\n\n1. افتح تطبيق Trust Wallet\n2. اختر العملة ${selectedCrypto}\n3. اضغط "إرسال"\n4. الصق العنوان المنسوخ: ${WALLET_ADDRESSES[selectedCrypto]}\n5. أرسل ${calculateCryptoAmount(selectedCrypto)} ${selectedCrypto}\n\n✅ تم نسخ العنوان تلقائياً!`);
+        setWalletConnected(true);
+        setConnectedWallet('Trust Wallet');
+      }
+    } catch (error) {
+      console.error('Error connecting to Trust Wallet:', error);
+      alert('❌ خطأ في الاتصال بـ Trust Wallet. يرجى المحاولة مرة أخرى.');
+    }
+  };
+
+  // Send payment directly through connected wallet
+  const sendPayment = async () => {
+    if (!walletConnected) {
+      alert('❌ يرجى ربط المحفظة أولاً');
+      return;
+    }
+
+    try {
+      if (selectedCrypto === 'ETH' || selectedCrypto === 'USDT' || selectedCrypto === 'USDC' || selectedCrypto === 'BNB') {
+        const amount = calculateCryptoAmount(selectedCrypto);
+        const amountInWei = (parseFloat(amount) * Math.pow(10, 18)).toString(16);
+
+        const transactionParameters = {
+          to: WALLET_ADDRESSES[selectedCrypto],
+          value: '0x' + amountInWei,
+          gas: '0x5208', // 21000 gas limit
+        };
+
+        const txHash = await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [transactionParameters],
+        });
+
+        setTransactionHash(txHash);
+        setPaymentSent(true);
+        alert(`✅ تم إرسال الدفعة بنجاح!\n\n🔗 رقم المعاملة: ${txHash}\n\nسيتم تأكيد الدفعة خلال دقائق قليلة.`);
+      } else {
+        // For BTC, show manual instructions
+        await navigator.clipboard.writeText(WALLET_ADDRESSES.BTC);
+        alert(`📱 لإرسال البيتكوين:\n\n1. افتح محفظة البيتكوين\n2. اختر "إرسال"\n3. الصق العنوان: ${WALLET_ADDRESSES.BTC}\n4. أرسل ${calculateCryptoAmount('BTC')} BTC\n5. انسخ رقم المعاملة وأدخله أدناه\n\n✅ تم نسخ العنوان!`);
+        setPaymentSent(true);
+      }
+    } catch (error) {
+      console.error('Error sending payment:', error);
+      alert('❌ خطأ في إرسال الدفعة. يرجى المحاولة مرة أخرى.');
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -120,53 +204,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
     }));
   };
 
-  // Create NOWPayments payment
-  const createNOWPayment = async () => {
-    const orderIdGenerated = `WC2026-${Date.now()}`;
+  const generateTicketPDF = () => {
+    const orderIdGenerated = orderId || `WC2026-${Date.now()}`;
     setOrderId(orderIdGenerated);
 
-    // Simulate NOWPayments API call
-    // In production, this would be a real API call to NOWPayments
-    const paymentData = {
-      price_amount: fees.finalAmount, // Include fees in the final amount
-      price_currency: 'USD',
-      pay_currency: 'btc', // Default to Bitcoin, user can change on NOWPayments page
-      order_id: orderIdGenerated,
-      order_description: `FIFA World Cup 2026 - ${ticketInfo.title}`,
-      ipn_callback_url: 'https://your-domain.com/nowpayments-callback',
-      success_url: 'https://your-domain.com/payment-success',
-      cancel_url: 'https://your-domain.com/payment-cancel',
-      customer_email: formData.email,
-    };
-
-    try {
-      // Simulate API response - in production, replace with actual NOWPayments API call
-      const mockPaymentUrl = `https://nowpayments.io/payment/?iid=${orderIdGenerated}&amount=${fees.finalAmount}&currency=USD`;
-      setPaymentUrl(mockPaymentUrl);
-      
-      // In production, you would make this API call:
-      /*
-      const response = await fetch('https://api.nowpayments.io/v1/payment', {
-        method: 'POST',
-        headers: {
-          'x-api-key': 'YOUR_NOWPAYMENTS_API_KEY',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(paymentData),
-      });
-      
-      const result = await response.json();
-      setPaymentUrl(result.payment_url);
-      */
-      
-    } catch (error) {
-      console.error('Error creating payment:', error);
-      alert('Error creating payment. Please try again.');
-    }
-  };
-
-  const generateTicketPDF = () => {
-    // Generate ticket content
     const ticketContent = `
 FIFA WORLD CUP 2026 - OFFICIAL TICKET
 
@@ -195,18 +236,17 @@ ${formData.postalCode || ''}
 💰 PAYMENT INFORMATION:
 Original Price: $${ticketInfo.price.toLocaleString()}
 Crypto Discount (30%): -$${(ticketInfo.price - ticketInfo.cryptoPrice).toLocaleString()}
-Ticket Amount: $${ticketInfo.cryptoPrice.toLocaleString()}
+Final Amount: $${ticketInfo.cryptoPrice.toLocaleString()}
 
-NOWPayments Fees:
-• Processing Fee (0.5%): $${fees.processingFee.toFixed(2)}
-• Exchange Rate Fee (0.25%): $${fees.exchangeFee.toFixed(2)}
-• Network Fee (estimated): $${fees.networkFee.toFixed(2)}
-• Total Fees: $${fees.totalFees.toFixed(2)}
-
-Final Amount Paid: $${fees.finalAmount.toFixed(2)}
-Payment Method: Cryptocurrency (NOWPayments)
+💎 CRYPTOCURRENCY PAYMENT:
+Currency: ${selectedCrypto}
+Amount Paid: ${calculateCryptoAmount(selectedCrypto)} ${selectedCrypto}
+Wallet Used: ${connectedWallet}
+${walletAddress ? `Customer Wallet: ${walletAddress}` : ''}
+${transactionHash ? `Transaction Hash: ${transactionHash}` : ''}
+Receiving Address: ${WALLET_ADDRESSES[selectedCrypto]}
 Payment Status: CONFIRMED ✅
-Order ID: ${orderId}
+Order ID: ${orderIdGenerated}
 
 ═══════════════════════════════════════════════════════════════
 
@@ -218,7 +258,7 @@ Order ID: ${orderId}
 • Valid ID required for entry
 • No outside food or drinks allowed
 
-🎫 TICKET ID: ${orderId}
+🎫 TICKET ID: ${orderIdGenerated}
 🔐 Security Code: ${Math.random().toString(36).substring(2, 15).toUpperCase()}
 
 ═══════════════════════════════════════════════════════════════
@@ -238,7 +278,6 @@ Valid for: FIFA World Cup 2026
 ⚠️ KEEP THIS TICKET SAFE - IT'S YOUR ENTRY TO THE MATCH! ⚠️
     `;
 
-    // Create and download the ticket file
     const blob = new Blob([ticketContent], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -251,8 +290,17 @@ Valid for: FIFA World Cup 2026
   };
 
   const confirmPayment = () => {
+    if (!transactionHash && selectedCrypto !== 'BTC') {
+      alert('❌ يرجى إرسال الدفعة أولاً');
+      return;
+    }
+    if (selectedCrypto === 'BTC' && !transactionHash) {
+      alert('❌ يرجى إدخال رقم المعاملة (Transaction Hash)');
+      return;
+    }
+    
     setPaymentConfirmed(true);
-    setCurrentStep(5); // Move to final step
+    setCurrentStep(5);
   };
 
   const validateStep = (step: number): boolean => {
@@ -282,7 +330,6 @@ Valid for: FIFA World Cup 2026
           alert('Please enter your phone number');
           return false;
         }
-        // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(formData.email)) {
           alert('Please enter a valid email address');
@@ -319,10 +366,6 @@ Valid for: FIFA World Cup 2026
 
   const handleNextStep = () => {
     if (validateStep(currentStep)) {
-      if (currentStep === 3) {
-        // Create payment when moving to payment step
-        createNOWPayment();
-      }
       setCurrentStep(prev => prev + 1);
     }
   };
@@ -361,7 +404,7 @@ Valid for: FIFA World Cup 2026
                 {currentStep === 1 && 'Personal Information'}
                 {currentStep === 2 && 'Address Details'}
                 {currentStep === 3 && 'Terms & Conditions'}
-                {currentStep === 4 && 'Crypto Payment'}
+                {currentStep === 4 && 'Crypto Wallet Payment'}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -591,7 +634,7 @@ Valid for: FIFA World Cup 2026
                     <span className="font-bold">-${(ticketInfo.price - ticketInfo.cryptoPrice).toLocaleString()}</span>
                   </div>
                   <div className="border-t pt-2 flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-800">Subtotal</span>
+                    <span className="text-lg font-bold text-gray-800">Final Amount</span>
                     <span className="text-xl font-bold text-green-600">${ticketInfo.cryptoPrice.toLocaleString()}</span>
                   </div>
                 </div>
@@ -601,10 +644,10 @@ Valid for: FIFA World Cup 2026
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                 <div className="flex items-center space-x-2 mb-2">
                   <div className="text-2xl">💎</div>
-                  <h4 className="font-semibold text-green-800">Cryptocurrency Payment via NOWPayments</h4>
+                  <h4 className="font-semibold text-green-800">Cryptocurrency Payment via Wallet</h4>
                 </div>
                 <p className="text-green-700 text-sm">
-                  Secure crypto payments powered by NOWPayments. Accept 150+ cryptocurrencies with 30% discount!
+                  Direct payment through MetaMask, Trust Wallet, or any compatible crypto wallet with 30% discount!
                 </p>
               </div>
 
@@ -639,13 +682,13 @@ Valid for: FIFA World Cup 2026
             </div>
           )}
 
-          {/* Step 4: NOWPayments Crypto Payment */}
+          {/* Step 4: Crypto Wallet Payment */}
           {currentStep === 4 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
                 <div className="text-4xl mb-2">💎</div>
-                <h3 className="text-xl font-bold text-gray-800">Secure Cryptocurrency Payment</h3>
-                <p className="text-gray-600">Complete your payment via NOWPayments</p>
+                <h3 className="text-xl font-bold text-gray-800">Cryptocurrency Wallet Payment</h3>
+                <p className="text-gray-600">Connect your wallet and complete payment</p>
               </div>
 
               {/* Customer Summary */}
@@ -661,125 +704,141 @@ Valid for: FIFA World Cup 2026
                 </div>
               </div>
 
-              {/* NOWPayments Integration */}
+              {/* Cryptocurrency Selection */}
               <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <Shield className="h-8 w-8 text-purple-600" />
-                  <div>
-                    <h4 className="font-semibold text-purple-800">Powered by NOWPayments</h4>
-                    <p className="text-purple-600 text-sm">Secure & trusted crypto payment processor</p>
+                <h4 className="font-semibold text-purple-800 mb-4">Select Cryptocurrency</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                  {Object.entries(CRYPTO_PRICES).map(([crypto, price]) => (
+                    <button
+                      key={crypto}
+                      onClick={() => setSelectedCrypto(crypto as keyof typeof CRYPTO_PRICES)}
+                      className={`p-3 rounded-lg border text-center transition-all duration-200 ${
+                        selectedCrypto === crypto
+                          ? 'border-purple-500 bg-purple-100 text-purple-700'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="font-bold text-lg">{crypto}</div>
+                      <div className="text-sm text-gray-600">${price.toLocaleString()}</div>
+                      <div className="text-xs font-semibold text-green-600">
+                        {calculateCryptoAmount(crypto as keyof typeof CRYPTO_PRICES)} {crypto}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Payment Amount Display */}
+                <div className="bg-white rounded-lg p-4 mb-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600 mb-2">
+                      {calculateCryptoAmount(selectedCrypto)} {selectedCrypto}
+                    </div>
+                    <div className="text-gray-600">
+                      ≈ ${ticketInfo.cryptoPrice.toLocaleString()} USD (30% discount applied)
+                    </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Wallet Connection */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-800">Connect Your Wallet</h4>
                 
-                {/* Payment Breakdown */}
-                <div className="bg-white rounded-lg p-4 mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-700">Order ID:</span>
-                    <span className="font-mono text-sm">{orderId}</span>
-                  </div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-700">Ticket Amount:</span>
-                    <span className="font-bold text-green-600">${ticketInfo.cryptoPrice.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-700">Crypto Discount:</span>
-                    <span className="font-bold text-green-600">30% OFF Applied</span>
-                  </div>
-                  
-                  {/* Fee Breakdown Toggle */}
-                  <div className="border-t pt-2 mt-2">
+                {!walletConnected ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* MetaMask Button */}
                     <button
-                      type="button"
-                      onClick={() => setShowFeeBreakdown(!showFeeBreakdown)}
-                      className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 text-sm"
+                      onClick={connectMetaMask}
+                      className="flex items-center justify-center space-x-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105"
                     >
-                      <DollarSign className="h-4 w-4" />
-                      <span>NOWPayments Fees & Final Amount</span>
-                      <Info className="h-4 w-4" />
+                      <Wallet className="h-6 w-6" />
+                      <span>Connect MetaMask</span>
                     </button>
-                    
-                    {showFeeBreakdown && (
-                      <div className="mt-3 bg-gray-50 rounded-lg p-3 text-sm">
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Processing Fee (0.5%):</span>
-                            <span className="text-gray-800">${fees.processingFee.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Exchange Rate Fee (0.25%):</span>
-                            <span className="text-gray-800">${fees.exchangeFee.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Network Fee (estimated):</span>
-                            <span className="text-gray-800">${fees.networkFee.toFixed(2)}</span>
-                          </div>
-                          <div className="border-t pt-2 flex justify-between font-semibold">
-                            <span className="text-gray-700">Total NOWPayments Fees:</span>
-                            <span className="text-red-600">${fees.totalFees.toFixed(2)}</span>
-                          </div>
-                          <div className="border-t pt-2 flex justify-between font-bold text-lg">
-                            <span className="text-gray-800">Final Amount to Pay:</span>
-                            <span className="text-blue-600">${fees.finalAmount.toFixed(2)}</span>
-                          </div>
-                        </div>
-                        
-                        {/* Fee Information */}
-                        <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                          <p className="text-yellow-800">
-                            <strong>ℹ️ Fee Information:</strong> NOWPayments charges industry-standard fees for secure crypto processing. 
-                            Network fees vary by cryptocurrency and network congestion. Final amount includes all fees.
-                          </p>
-                        </div>
+
+                    {/* Trust Wallet Button */}
+                    <button
+                      onClick={connectTrustWallet}
+                      className="flex items-center justify-center space-x-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105"
+                    >
+                      <Smartphone className="h-6 w-6" />
+                      <span>Connect Trust Wallet</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Check className="h-5 w-5 text-green-600" />
+                      <span className="font-semibold text-green-800">Wallet Connected: {connectedWallet}</span>
+                    </div>
+                    {walletAddress && (
+                      <div className="text-sm text-green-700">
+                        Address: {walletAddress.substring(0, 10)}...{walletAddress.substring(walletAddress.length - 8)}
                       </div>
                     )}
                   </div>
-                </div>
-
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                  <p className="text-yellow-800 text-sm">
-                    <strong>Supported Cryptocurrencies:</strong> Bitcoin (BTC), Ethereum (ETH), USDT, USDC, Litecoin (LTC), and 150+ more!
-                  </p>
-                </div>
+                )}
               </div>
 
-              {/* Payment Button */}
-              <div className="space-y-4">
-                <a
-                  href={paymentUrl || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3 block text-center"
-                  onClick={() => {
-                    if (!paymentUrl) {
-                      alert('Payment is being prepared. Please wait...');
-                      return false;
-                    }
-                  }}
-                >
-                  <CreditCard className="h-6 w-6" />
-                  <span>Pay ${fees.finalAmount.toFixed(2)} with Crypto</span>
-                  <ExternalLink className="h-5 w-5" />
-                </a>
-                
-                <p className="text-gray-600 text-sm text-center">
-                  You will be redirected to NOWPayments secure payment page. 
-                  After completing payment, return here to download your ticket.
-                </p>
-              </div>
+              {/* Payment Actions */}
+              {walletConnected && (
+                <div className="space-y-4">
+                  {!paymentSent ? (
+                    <button
+                      onClick={sendPayment}
+                      className="w-full bg-gradient-to-r from-green-600 to-green-800 hover:from-green-700 hover:to-green-900 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3"
+                    >
+                      <CreditCard className="h-6 w-6" />
+                      <span>Send {calculateCryptoAmount(selectedCrypto)} {selectedCrypto}</span>
+                    </button>
+                  ) : (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Info className="h-5 w-5 text-yellow-600" />
+                        <span className="font-semibold text-yellow-800">Payment Sent</span>
+                      </div>
+                      <p className="text-yellow-700 text-sm mb-3">
+                        Your payment has been sent. Please wait for blockchain confirmation.
+                      </p>
+                      
+                      {/* Transaction Hash Input for BTC */}
+                      {selectedCrypto === 'BTC' && !transactionHash && (
+                        <div className="mb-3">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Transaction Hash (Required for Bitcoin) *
+                          </label>
+                          <input
+                            type="text"
+                            value={transactionHash}
+                            onChange={(e) => setTransactionHash(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter transaction hash from your Bitcoin wallet"
+                            required
+                          />
+                        </div>
+                      )}
+                      
+                      {transactionHash && (
+                        <div className="text-sm text-gray-600 mb-3">
+                          <strong>Transaction Hash:</strong> {transactionHash.substring(0, 20)}...
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Payment Confirmation */}
-              <div className="text-center border-t pt-6">
-                <p className="text-gray-600 text-sm mb-4">
-                  After completing your payment on NOWPayments, click the button below:
-                </p>
-                <button
-                  type="button"
-                  onClick={confirmPayment}
-                  className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300"
-                >
-                  ✅ I Have Completed the Payment
-                </button>
-              </div>
+              {paymentSent && (
+                <div className="text-center border-t pt-6">
+                  <button
+                    type="button"
+                    onClick={confirmPayment}
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300"
+                  >
+                    ✅ Confirm Payment & Get Ticket
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -799,18 +858,18 @@ Valid for: FIFA World Cup 2026
                   <h4 className="font-semibold text-green-800">Order Successfully Processed</h4>
                 </div>
                 <p className="text-green-700 text-sm mb-4">
-                  Thank you for your purchase! Your payment has been confirmed via NOWPayments and your tickets are ready for download.
+                  Thank you for your purchase! Your cryptocurrency payment has been confirmed and your tickets are ready for download.
                 </p>
                 
                 <div className="bg-white rounded-lg p-4 mb-4">
                   <div className="text-sm text-gray-600 space-y-1">
-                    <div><strong>Order ID:</strong> {orderId}</div>
+                    <div><strong>Order ID:</strong> {orderId || `WC2026-${Date.now()}`}</div>
                     <div><strong>Customer:</strong> {formData.firstName} {formData.lastName}</div>
                     <div><strong>Email:</strong> {formData.email}</div>
-                    <div><strong>Ticket Amount:</strong> ${ticketInfo.cryptoPrice.toLocaleString()} (30% crypto discount applied)</div>
-                    <div><strong>NOWPayments Fees:</strong> ${fees.totalFees.toFixed(2)}</div>
-                    <div><strong>Total Paid:</strong> ${fees.finalAmount.toFixed(2)}</div>
-                    <div><strong>Payment Method:</strong> Cryptocurrency via NOWPayments</div>
+                    <div><strong>Amount:</strong> ${ticketInfo.cryptoPrice.toLocaleString()} (30% crypto discount applied)</div>
+                    <div><strong>Cryptocurrency:</strong> {calculateCryptoAmount(selectedCrypto)} {selectedCrypto}</div>
+                    <div><strong>Wallet Used:</strong> {connectedWallet}</div>
+                    {transactionHash && <div><strong>Transaction:</strong> {transactionHash.substring(0, 20)}...</div>}
                   </div>
                 </div>
               </div>
@@ -888,7 +947,7 @@ Valid for: FIFA World Cup 2026
                 </button>
               ) : (
                 <div className="ml-auto">
-                  <p className="text-sm text-gray-600">Complete payment via NOWPayments to finish your order</p>
+                  <p className="text-sm text-gray-600">Connect your wallet and complete payment to finish your order</p>
                 </div>
               )}
             </div>
