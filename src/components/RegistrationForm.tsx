@@ -29,6 +29,29 @@ interface FormData {
   agreeMarketing: boolean;
 }
 
+const countries = [
+  'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Australia', 'Austria',
+  'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan',
+  'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cambodia',
+  'Cameroon', 'Canada', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo', 'Costa Rica',
+  'Croatia', 'Cuba', 'Cyprus', 'Czech Republic', 'Democratic Republic of the Congo', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador',
+  'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia', 'Fiji', 'Finland', 'France',
+  'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau',
+  'Guyana', 'Haiti', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 'Ireland',
+  'Israel', 'Italy', 'Ivory Coast', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati', 'Kuwait',
+  'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg',
+  'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico',
+  'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nauru',
+  'Nepal', 'Netherlands', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'North Korea', 'North Macedonia', 'Norway', 'Oman',
+  'Pakistan', 'Palau', 'Palestine', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal',
+  'Qatar', 'Romania', 'Russia', 'Rwanda', 'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe',
+  'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia',
+  'South Africa', 'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 'Sweden', 'Switzerland', 'Syria',
+  'Taiwan', 'Tajikistan', 'Tanzania', 'Thailand', 'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey',
+  'Turkmenistan', 'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan', 'Vanuatu',
+  'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe'
+];
+
 const RegistrationForm: React.FC<RegistrationFormProps> = ({
   isOpen,
   onClose,
@@ -90,21 +113,24 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
 • Name: ${formData.firstName} ${formData.lastName}
 • Email: ${formData.email}
 • Phone: ${formData.phone}
+• Date of Birth: ${formData.dateOfBirth || 'Not provided'}
+• Nationality: ${formData.nationality || 'Not provided'}
 • Country: ${formData.country}
 • Address: ${formData.address}, ${formData.city}
+• Postal Code: ${formData.postalCode || 'Not provided'}
 
 🎟️ Ticket Details:
 • ${ticketInfo.title}
 • Payment Method: ${formData.paymentMethod === 'crypto' ? 'Cryptocurrency (50% Discount)' : 'Credit Card'}
-• Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice : ticketInfo.price}
+• Amount: $${formData.paymentMethod === 'crypto' ? ticketInfo.cryptoPrice.toLocaleString() : ticketInfo.price.toLocaleString()}
 
 ${formData.paymentMethod === 'crypto' ? 
 `💰 Crypto Payment Details:
 • Wallet Address: ${walletAddress}
-• Amount to Send: $${ticketInfo.cryptoPrice} worth of ETH/BTC/USDT
+• Amount to Send: $${ticketInfo.cryptoPrice.toLocaleString()} worth of ETH/BTC/USDT
 • Payment Status: Pending Confirmation` : 
 `💳 Credit Card Payment:
-• Amount: $${ticketInfo.price}
+• Amount: $${ticketInfo.price.toLocaleString()}
 • Payment Status: Awaiting Processing`}
 
 Please confirm this order and process my ticket purchase. Thank you!
@@ -338,21 +364,9 @@ Please confirm this order and process my ticket purchase. Thank you!
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">Select Nationality</option>
-                  <option value="US">United States</option>
-                  <option value="CA">Canada</option>
-                  <option value="MX">Mexico</option>
-                  <option value="BR">Brazil</option>
-                  <option value="AR">Argentina</option>
-                  <option value="DE">Germany</option>
-                  <option value="FR">France</option>
-                  <option value="ES">Spain</option>
-                  <option value="IT">Italy</option>
-                  <option value="GB">United Kingdom</option>
-                  <option value="SA">Saudi Arabia</option>
-                  <option value="AE">UAE</option>
-                  <option value="EG">Egypt</option>
-                  <option value="MA">Morocco</option>
-                  <option value="other">Other</option>
+                  {countries.map((country) => (
+                    <option key={country} value={country}>{country}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -424,20 +438,9 @@ Please confirm this order and process my ticket purchase. Thank you!
                   required
                 >
                   <option value="">Select Country</option>
-                  <option value="United States">United States</option>
-                  <option value="Canada">Canada</option>
-                  <option value="Mexico">Mexico</option>
-                  <option value="Brazil">Brazil</option>
-                  <option value="Argentina">Argentina</option>
-                  <option value="Germany">Germany</option>
-                  <option value="France">France</option>
-                  <option value="Spain">Spain</option>
-                  <option value="Italy">Italy</option>
-                  <option value="United Kingdom">United Kingdom</option>
-                  <option value="Saudi Arabia">Saudi Arabia</option>
-                  <option value="UAE">UAE</option>
-                  <option value="Egypt">Egypt</option>
-                  <option value="Morocco">Morocco</option>
+                  {countries.map((country) => (
+                    <option key={country} value={country}>{country}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -547,6 +550,8 @@ Please confirm this order and process my ticket purchase. Thank you!
                   <div><strong>Email:</strong> {formData.email}</div>
                   <div><strong>Phone:</strong> {formData.phone}</div>
                   <div><strong>Country:</strong> {formData.country}</div>
+                  {formData.nationality && <div><strong>Nationality:</strong> {formData.nationality}</div>}
+                  {formData.dateOfBirth && <div><strong>Date of Birth:</strong> {formData.dateOfBirth}</div>}
                 </div>
               </div>
 
