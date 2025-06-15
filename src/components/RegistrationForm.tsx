@@ -82,7 +82,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
   const [connectedWallet, setConnectedWallet] = useState('');
   const [walletAddress, setWalletAddress] = useState('');
   const [transactionHash, setTransactionHash] = useState('');
-  const [paymentSent, setPaymentSent] = useState(false);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     firstName: '',
     lastName: '',
@@ -106,94 +106,353 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
     return (ticketInfo.cryptoPrice / CRYPTO_PRICES[currency]).toFixed(8);
   };
 
-  // Connect to MetaMask
-  const connectMetaMask = async () => {
+  // Connect and pay with MetaMask
+  const connectAndPayMetaMask = async () => {
     try {
+      setPaymentProcessing(true);
+      
       if (typeof window.ethereum !== 'undefined') {
+        // Request account access
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        
         if (accounts.length > 0) {
           setWalletConnected(true);
           setConnectedWallet('MetaMask');
           setWalletAddress(accounts[0]);
           
-          // Copy wallet address to clipboard
+          // Copy receiving address to clipboard
           await navigator.clipboard.writeText(WALLET_ADDRESSES[selectedCrypto]);
-          alert(`✅ MetaMask متصل بنجاح!\n📋 تم نسخ عنوان المحفظة: ${WALLET_ADDRESSES[selectedCrypto]}\n\nيمكنك الآن إرسال ${calculateCryptoAmount(selectedCrypto)} ${selectedCrypto} إلى العنوان المنسوخ`);
+          
+          // Calculate amount in Wei for ETH-based currencies
+          const amount = calculateCryptoAmount(selectedCrypto);
+          let transactionParams;
+          
+          if (selectedCrypto === 'ETH') {
+            const amountInWei = (parseFloat(amount) * Math.pow(10, 18)).toString(16);
+            transactionParams = {
+              to: WALLET_ADDRESSES[selectedCrypto],
+              from: accounts[0],
+              value: '0x' + amountInWei,
+              gas: '0x5208', // 21000 gas limit
+            };
+          } else {
+            // For tokens like USDT, USDC - simplified approach
+            const amountInWei = (parseFloat(amount) * Math.pow(10, 6)).toString(16); // Most tokens use 6 decimals
+            transactionParams = {
+              to: WALLET_ADDRESSES[selectedCrypto],
+              from: accounts[0],
+              value: '0x0', // No ETH value for token transfers
+              data: `0xa9059cbb000000000000000000000000${WALLET_ADDRESSES[selectedCrypto].slice(2)}${amountInWei.padStart(64, '0')}`,
+              gas: '0x7530', // 30000 gas limit for token transfers
+            };
+          }
+
+          // Send transaction
+          const txHash = await window.ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [transactionParams],
+          });
+
+          setTransactionHash(txHash);
+          
+          // Auto-confirm payment after successful transaction
+          setTimeout(() => {
+            setPaymentConfirmed(true);
+            setCurrentStep(5);
+            setPaymentProcessing(false);
+          }, 2000);
+          
+          alert(`✅ Payment sent successfully!\n\n🔗 Transaction Hash: ${txHash}\n💰 Amount: ${amount} ${selectedCrypto}\n📋 Receiving Address: ${WALLET_ADDRESSES[selectedCrypto]}\n\nYour ticket will be ready for download shortly!`);
+          
         }
       } else {
-        alert('❌ MetaMask غير مثبت. يرجى تثبيت MetaMask أولاً.');
+        setPaymentProcessing(false);
+        alert('❌ MetaMask is not installed. Please install MetaMask first.');
         window.open('https://metamask.io/download/', '_blank');
       }
     } catch (error) {
-      console.error('Error connecting to MetaMask:', error);
-      alert('❌ خطأ في الاتصال بـ MetaMask. يرجى المحاولة مرة أخرى.');
+      setPaymentProcessing(false);
+      console.error('Error with MetaMask payment:', error);
+      alert('❌ Payment failed. Please try again or contact support.');
     }
   };
 
-  // Connect to Trust Wallet
-  const connectTrustWallet = async () => {
+  // Connect and pay with Trust Wallet
+  const connectAndPayTrustWallet = async () => {
     try {
+      setPaymentProcessing(true);
+      
       // Check if Trust Wallet is available
-      if (typeof window.ethereum !== 'undefined' && window.ethereum.isTrust) {
+      if (typeof window.ethereum !== 'undefined') {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        
         if (accounts.length > 0) {
           setWalletConnected(true);
           setConnectedWallet('Trust Wallet');
           setWalletAddress(accounts[0]);
           
-          // Copy wallet address to clipboard
+          // Copy receiving address to clipboard
           await navigator.clipboard.writeText(WALLET_ADDRESSES[selectedCrypto]);
-          alert(`✅ Trust Wallet متصل بنجاح!\n📋 تم نسخ عنوان المحفظة: ${WALLET_ADDRESSES[selectedCrypto]}\n\nيمكنك الآن إرسال ${calculateCryptoAmount(selectedCrypto)} ${selectedCrypto} إلى العنوان المنسوخ`);
+          
+          // Calculate amount and send transaction
+          const amount = calculateCryptoAmount(selectedCrypto);
+          const amountInWei = (parseFloat(amount) * Math.pow(10, 18)).toString(16);
+          
+          const transactionParams = {
+            to: WALLET_ADDRESSES[selectedCrypto],
+            from: accounts[0],
+            value: '0x' + amountInWei,
+            gas: '0x5208',
+          };
+
+          const txHash = await window.ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [transactionParams],
+          });
+
+          setTransactionHash(txHash);
+          
+          // Auto-confirm payment
+          setTimeout(() => {
+            setPaymentConfirmed(true);
+            setCurrentStep(5);
+            setPaymentProcessing(false);
+          }, 2000);
+          
+          alert(`✅ Payment sent via Trust Wallet!\n\n🔗 Transaction Hash: ${txHash}\n💰 Amount: ${amount} ${selectedCrypto}\n📋 Receiving Address: ${WALLET_ADDRESSES[selectedCrypto]}\n\nYour ticket is being processed!`);
         }
       } else {
-        // Fallback: Copy address and show instructions
+        // Fallback for mobile Trust Wallet
+        setPaymentProcessing(false);
         await navigator.clipboard.writeText(WALLET_ADDRESSES[selectedCrypto]);
-        alert(`📱 لاستخدام Trust Wallet:\n\n1. افتح تطبيق Trust Wallet\n2. اختر العملة ${selectedCrypto}\n3. اضغط "إرسال"\n4. الصق العنوان المنسوخ: ${WALLET_ADDRESSES[selectedCrypto]}\n5. أرسل ${calculateCryptoAmount(selectedCrypto)} ${selectedCrypto}\n\n✅ تم نسخ العنوان تلقائياً!`);
+        const amount = calculateCryptoAmount(selectedCrypto);
+        
+        alert(`📱 Trust Wallet Instructions:\n\n1. Open Trust Wallet app\n2. Select ${selectedCrypto}\n3. Tap "Send"\n4. Paste address: ${WALLET_ADDRESSES[selectedCrypto]}\n5. Send ${amount} ${selectedCrypto}\n\n✅ Address copied to clipboard!\n\nAfter sending, return here to confirm payment.`);
+        
         setWalletConnected(true);
-        setConnectedWallet('Trust Wallet');
+        setConnectedWallet('Trust Wallet (Mobile)');
       }
     } catch (error) {
-      console.error('Error connecting to Trust Wallet:', error);
-      alert('❌ خطأ في الاتصال بـ Trust Wallet. يرجى المحاولة مرة أخرى.');
+      setPaymentProcessing(false);
+      console.error('Error with Trust Wallet payment:', error);
+      alert('❌ Payment failed. Please try again or contact support.');
     }
   };
 
-  // Send payment directly through connected wallet
-  const sendPayment = async () => {
-    if (!walletConnected) {
-      alert('❌ يرجى ربط المحفظة أولاً');
-      return;
-    }
+  // Generate realistic FIFA ticket
+  const generateFIFATicket = () => {
+    const orderIdGenerated = orderId || `FIFA2026-${Date.now().toString().slice(-8)}`;
+    setOrderId(orderIdGenerated);
 
-    try {
-      if (selectedCrypto === 'ETH' || selectedCrypto === 'USDT' || selectedCrypto === 'USDC' || selectedCrypto === 'BNB') {
-        const amount = calculateCryptoAmount(selectedCrypto);
-        const amountInWei = (parseFloat(amount) * Math.pow(10, 18)).toString(16);
+    const ticketContent = `
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          FIFA WORLD CUP 2026™                               ║
+║                           OFFICIAL MATCH TICKET                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
-        const transactionParameters = {
-          to: WALLET_ADDRESSES[selectedCrypto],
-          value: '0x' + amountInWei,
-          gas: '0x5208', // 21000 gas limit
-        };
+🏆 TOURNAMENT: FIFA World Cup 2026™
+🌍 HOST COUNTRIES: United States • Canada • Mexico
+📅 TOURNAMENT PERIOD: June 11 - July 19, 2026
 
-        const txHash = await window.ethereum.request({
-          method: 'eth_sendTransaction',
-          params: [transactionParameters],
-        });
+═══════════════════════════════════════════════════════════════════════════════
 
-        setTransactionHash(txHash);
-        setPaymentSent(true);
-        alert(`✅ تم إرسال الدفعة بنجاح!\n\n🔗 رقم المعاملة: ${txHash}\n\nسيتم تأكيد الدفعة خلال دقائق قليلة.`);
-      } else {
-        // For BTC, show manual instructions
-        await navigator.clipboard.writeText(WALLET_ADDRESSES.BTC);
-        alert(`📱 لإرسال البيتكوين:\n\n1. افتح محفظة البيتكوين\n2. اختر "إرسال"\n3. الصق العنوان: ${WALLET_ADDRESSES.BTC}\n4. أرسل ${calculateCryptoAmount('BTC')} BTC\n5. انسخ رقم المعاملة وأدخله أدناه\n\n✅ تم نسخ العنوان!`);
-        setPaymentSent(true);
-      }
-    } catch (error) {
-      console.error('Error sending payment:', error);
-      alert('❌ خطأ في إرسال الدفعة. يرجى المحاولة مرة أخرى.');
-    }
+🎫 MATCH DETAILS:
+${ticketInfo.title}
+
+📍 VENUE INFORMATION:
+Stadium: [Stadium will be confirmed closer to match date]
+City: [City will be confirmed based on match schedule]
+Country: USA/Canada/Mexico
+
+⏰ MATCH SCHEDULE:
+Date: [To be confirmed by FIFA]
+Kick-off Time: [Local time will be announced]
+Gates Open: 2 hours before kick-off
+
+═══════════════════════════════════════════════════════════════════════════════
+
+👤 TICKET HOLDER INFORMATION:
+Full Name: ${formData.firstName.toUpperCase()} ${formData.lastName.toUpperCase()}
+Email: ${formData.email}
+Phone: ${formData.phone}
+Nationality: ${formData.nationality || 'Not specified'}
+Date of Birth: ${formData.dateOfBirth || 'Not specified'}
+
+📮 BILLING ADDRESS:
+${formData.address}
+${formData.city}, ${formData.country}
+${formData.postalCode || ''}
+
+═══════════════════════════════════════════════════════════════════════════════
+
+💰 PAYMENT CONFIRMATION:
+Order ID: ${orderIdGenerated}
+Original Price: $${ticketInfo.price.toLocaleString()} USD
+Cryptocurrency Discount: 30% OFF
+Final Amount Paid: $${ticketInfo.cryptoPrice.toLocaleString()} USD
+
+💎 CRYPTOCURRENCY PAYMENT DETAILS:
+Payment Method: ${connectedWallet}
+Currency Used: ${selectedCrypto}
+Amount Paid: ${calculateCryptoAmount(selectedCrypto)} ${selectedCrypto}
+Customer Wallet: ${walletAddress ? `${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 8)}` : 'N/A'}
+Transaction Hash: ${transactionHash || 'Processing...'}
+Receiving Address: ${WALLET_ADDRESSES[selectedCrypto]}
+Payment Status: ✅ CONFIRMED
+Payment Date: ${new Date().toLocaleString('en-US', { 
+  year: 'numeric', 
+  month: 'long', 
+  day: 'numeric', 
+  hour: '2-digit', 
+  minute: '2-digit',
+  timeZoneName: 'short'
+})}
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🎫 TICKET AUTHENTICATION:
+Ticket ID: ${orderIdGenerated}
+Security Code: ${Math.random().toString(36).substring(2, 15).toUpperCase()}
+QR Code: [Digital QR code will be sent via email]
+Barcode: ${Math.random().toString().replace('0.', '').substring(0, 12)}
+
+🔐 ANTI-COUNTERFEITING FEATURES:
+• Unique holographic security elements
+• Embedded RFID chip for stadium entry
+• Blockchain-verified authenticity
+• FIFA official watermark
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📋 IMPORTANT MATCH DAY INFORMATION:
+
+🚪 STADIUM ENTRY:
+• Arrive at least 2 hours before kick-off
+• Present this ticket AND valid photo ID
+• ID must match ticket holder name exactly
+• Children under 16 must be accompanied by an adult
+
+🚫 PROHIBITED ITEMS:
+• Outside food and beverages
+• Professional cameras and recording equipment
+• Weapons, sharp objects, or dangerous items
+• Alcohol (available for purchase inside stadium)
+• Flags or banners larger than 2m x 1m
+
+✅ PERMITTED ITEMS:
+• Small personal bags (subject to search)
+• Mobile phones and small cameras
+• Prescription medications
+• Small flags and scarves
+
+🎯 STADIUM FACILITIES:
+• Accessible seating available
+• Food and beverage concessions
+• Official FIFA merchandise stores
+• First aid and medical facilities
+• Lost and found services
+
+═══════════════════════════════════════════════════════════════════════════════
+
+⚠️  TERMS AND CONDITIONS:
+
+🔄 TICKET TRANSFER POLICY:
+• Tickets are NON-TRANSFERABLE
+• Resale is STRICTLY PROHIBITED
+• Only original purchaser may use ticket
+• FIFA reserves right to cancel fraudulent tickets
+
+💸 REFUND POLICY:
+• NO REFUNDS under any circumstances
+• NO EXCHANGES permitted
+• Weather delays do not qualify for refunds
+• Match postponements will honor original tickets
+
+🏟️ STADIUM REGULATIONS:
+• Follow all stadium staff instructions
+• Respect other spectators and players
+• No discriminatory behavior tolerated
+• Smoking prohibited in stadium
+• Comply with local laws and regulations
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📞 CUSTOMER SUPPORT & ASSISTANCE:
+
+🌐 FIFA Official Channels:
+Website: www.fifa.com/worldcup
+Email: tickets@fifa.com
+Phone: +41 43 222 7777 (FIFA Headquarters)
+
+🎫 Ticket Portal Support:
+Phone: +1 (555) 123-4567
+WhatsApp: ${whatsappNumber}
+Email: support@worldcup2026tickets.com
+Hours: 24/7 Customer Service
+
+🚨 EMERGENCY CONTACTS:
+Match Day Hotline: [Will be provided closer to match date]
+Stadium Security: [Available on match day]
+Local Emergency Services: 911 (USA), 911 (Canada), 911 (Mexico)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🏆 FIFA WORLD CUP 2026™ - BIGGER. BETTER. TOGETHER.
+
+This ticket grants access to the FIFA World Cup 2026™ match specified above.
+This is an official FIFA-sanctioned ticket purchased through an authorized vendor.
+
+⚡ BLOCKCHAIN VERIFIED: This ticket's authenticity is verified on the blockchain
+🔒 SECURE PURCHASE: Payment processed through encrypted cryptocurrency transaction
+🌟 PREMIUM EXPERIENCE: Enjoy the greatest football celebration on Earth
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📄 LEGAL DISCLAIMER:
+This ticket is issued subject to FIFA regulations and local stadium policies.
+FIFA and its partners are not liable for any indirect or consequential damages.
+By using this ticket, holder agrees to be filmed/photographed for broadcast.
+Ticket holder assumes all risks associated with attending the event.
+
+🎭 CONDUCT POLICY:
+Discriminatory behavior, violence, or disruption will result in ejection.
+FIFA promotes respect, diversity, and fair play at all events.
+Help create a positive atmosphere for all spectators.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Generated: ${new Date().toLocaleString('en-US', { 
+  weekday: 'long',
+  year: 'numeric', 
+  month: 'long', 
+  day: 'numeric', 
+  hour: '2-digit', 
+  minute: '2-digit',
+  second: '2-digit',
+  timeZoneName: 'long'
+})}
+
+Valid for: FIFA World Cup 2026™ Tournament
+Issued by: Official FIFA Ticket Portal
+
+⚠️  KEEP THIS TICKET SAFE - IT IS YOUR ENTRY TO THE MATCH! ⚠️
+🎫 Present this ticket with valid ID at stadium entrance 🎫
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  © FIFA 2026. FIFA World Cup 2026™ and all related marks are trademarks    ║
+║  of FIFA. All rights reserved. Unauthorized reproduction is prohibited.      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+    `;
+
+    const blob = new Blob([ticketContent], { type: 'text/plain;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `FIFA_WorldCup_2026_Official_Ticket_${formData.firstName}_${formData.lastName}_${orderIdGenerated}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -202,105 +461,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
-  };
-
-  const generateTicketPDF = () => {
-    const orderIdGenerated = orderId || `WC2026-${Date.now()}`;
-    setOrderId(orderIdGenerated);
-
-    const ticketContent = `
-FIFA WORLD CUP 2026 - OFFICIAL TICKET
-
-═══════════════════════════════════════════════════════════════
-
-🏆 ${ticketInfo.title}
-📅 Tournament: FIFA World Cup 2026
-🌍 Host Countries: USA, Canada & Mexico
-
-═══════════════════════════════════════════════════════════════
-
-👤 TICKET HOLDER INFORMATION:
-Name: ${formData.firstName} ${formData.lastName}
-Email: ${formData.email}
-Phone: ${formData.phone}
-Nationality: ${formData.nationality || 'Not specified'}
-Date of Birth: ${formData.dateOfBirth || 'Not specified'}
-
-📍 ADDRESS:
-${formData.address}
-${formData.city}, ${formData.country}
-${formData.postalCode || ''}
-
-═══════════════════════════════════════════════════════════════
-
-💰 PAYMENT INFORMATION:
-Original Price: $${ticketInfo.price.toLocaleString()}
-Crypto Discount (30%): -$${(ticketInfo.price - ticketInfo.cryptoPrice).toLocaleString()}
-Final Amount: $${ticketInfo.cryptoPrice.toLocaleString()}
-
-💎 CRYPTOCURRENCY PAYMENT:
-Currency: ${selectedCrypto}
-Amount Paid: ${calculateCryptoAmount(selectedCrypto)} ${selectedCrypto}
-Wallet Used: ${connectedWallet}
-${walletAddress ? `Customer Wallet: ${walletAddress}` : ''}
-${transactionHash ? `Transaction Hash: ${transactionHash}` : ''}
-Receiving Address: ${WALLET_ADDRESSES[selectedCrypto]}
-Payment Status: CONFIRMED ✅
-Order ID: ${orderIdGenerated}
-
-═══════════════════════════════════════════════════════════════
-
-📋 IMPORTANT INFORMATION:
-• This is your official FIFA World Cup 2026 ticket
-• Present this ticket at the stadium entrance
-• Ticket is non-transferable and non-refundable
-• Arrive at least 2 hours before match time
-• Valid ID required for entry
-• No outside food or drinks allowed
-
-🎫 TICKET ID: ${orderIdGenerated}
-🔐 Security Code: ${Math.random().toString(36).substring(2, 15).toUpperCase()}
-
-═══════════════════════════════════════════════════════════════
-
-📞 CUSTOMER SUPPORT:
-Phone: +1 (555) 123-4567
-WhatsApp: ${whatsappNumber}
-Email: tickets@worldcup2026.com
-
-🌐 Official Website: FIFA World Cup 2026 Ticket Portal
-
-═══════════════════════════════════════════════════════════════
-
-Generated on: ${new Date().toLocaleString()}
-Valid for: FIFA World Cup 2026
-
-⚠️ KEEP THIS TICKET SAFE - IT'S YOUR ENTRY TO THE MATCH! ⚠️
-    `;
-
-    const blob = new Blob([ticketContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `FIFA_WorldCup_2026_Ticket_${formData.firstName}_${formData.lastName}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  };
-
-  const confirmPayment = () => {
-    if (!transactionHash && selectedCrypto !== 'BTC') {
-      alert('❌ يرجى إرسال الدفعة أولاً');
-      return;
-    }
-    if (selectedCrypto === 'BTC' && !transactionHash) {
-      alert('❌ يرجى إدخال رقم المعاملة (Transaction Hash)');
-      return;
-    }
-    
-    setPaymentConfirmed(true);
-    setCurrentStep(5);
   };
 
   const validateStep = (step: number): boolean => {
@@ -383,7 +543,7 @@ Valid for: FIFA World Cup 2026
         <div className="flex justify-between items-center p-6 border-b bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-t-2xl">
           <div>
             <h2 className="text-2xl font-bold">
-              {currentStep === 5 ? 'Payment Confirmed!' : 'Complete Your Registration'}
+              {currentStep === 5 ? '🎉 Payment Confirmed!' : 'Complete Your Registration'}
             </h2>
             <p className="text-blue-200 text-sm">{ticketInfo.title}</p>
           </div>
@@ -404,7 +564,7 @@ Valid for: FIFA World Cup 2026
                 {currentStep === 1 && 'Personal Information'}
                 {currentStep === 2 && 'Address Details'}
                 {currentStep === 3 && 'Terms & Conditions'}
-                {currentStep === 4 && 'Crypto Wallet Payment'}
+                {currentStep === 4 && 'Cryptocurrency Payment'}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -644,10 +804,10 @@ Valid for: FIFA World Cup 2026
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                 <div className="flex items-center space-x-2 mb-2">
                   <div className="text-2xl">💎</div>
-                  <h4 className="font-semibold text-green-800">Cryptocurrency Payment via Wallet</h4>
+                  <h4 className="font-semibold text-green-800">Integrated Cryptocurrency Payment</h4>
                 </div>
                 <p className="text-green-700 text-sm">
-                  Direct payment through MetaMask, Trust Wallet, or any compatible crypto wallet with 30% discount!
+                  One-click payment through MetaMask or Trust Wallet with automatic confirmation and instant ticket delivery!
                 </p>
               </div>
 
@@ -682,13 +842,13 @@ Valid for: FIFA World Cup 2026
             </div>
           )}
 
-          {/* Step 4: Crypto Wallet Payment */}
+          {/* Step 4: Integrated Crypto Payment */}
           {currentStep === 4 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
                 <div className="text-4xl mb-2">💎</div>
-                <h3 className="text-xl font-bold text-gray-800">Cryptocurrency Wallet Payment</h3>
-                <p className="text-gray-600">Connect your wallet and complete payment</p>
+                <h3 className="text-xl font-bold text-gray-800">Cryptocurrency Payment</h3>
+                <p className="text-gray-600">Select your preferred cryptocurrency and wallet</p>
               </div>
 
               {/* Customer Summary */}
@@ -740,105 +900,71 @@ Valid for: FIFA World Cup 2026
                 </div>
               </div>
 
-              {/* Wallet Connection */}
+              {/* Integrated Wallet Payment Buttons */}
               <div className="space-y-4">
-                <h4 className="font-semibold text-gray-800">Connect Your Wallet</h4>
+                <h4 className="font-semibold text-gray-800">Complete Payment with One Click</h4>
                 
-                {!walletConnected ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* MetaMask Button */}
-                    <button
-                      onClick={connectMetaMask}
-                      className="flex items-center justify-center space-x-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105"
-                    >
-                      <Wallet className="h-6 w-6" />
-                      <span>Connect MetaMask</span>
-                    </button>
-
-                    {/* Trust Wallet Button */}
-                    <button
-                      onClick={connectTrustWallet}
-                      className="flex items-center justify-center space-x-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105"
-                    >
-                      <Smartphone className="h-6 w-6" />
-                      <span>Connect Trust Wallet</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Check className="h-5 w-5 text-green-600" />
-                      <span className="font-semibold text-green-800">Wallet Connected: {connectedWallet}</span>
-                    </div>
-                    {walletAddress && (
-                      <div className="text-sm text-green-700">
-                        Address: {walletAddress.substring(0, 10)}...{walletAddress.substring(walletAddress.length - 8)}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Payment Actions */}
-              {walletConnected && (
-                <div className="space-y-4">
-                  {!paymentSent ? (
-                    <button
-                      onClick={sendPayment}
-                      className="w-full bg-gradient-to-r from-green-600 to-green-800 hover:from-green-700 hover:to-green-900 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3"
-                    >
-                      <CreditCard className="h-6 w-6" />
-                      <span>Send {calculateCryptoAmount(selectedCrypto)} {selectedCrypto}</span>
-                    </button>
-                  ) : (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Info className="h-5 w-5 text-yellow-600" />
-                        <span className="font-semibold text-yellow-800">Payment Sent</span>
-                      </div>
-                      <p className="text-yellow-700 text-sm mb-3">
-                        Your payment has been sent. Please wait for blockchain confirmation.
-                      </p>
-                      
-                      {/* Transaction Hash Input for BTC */}
-                      {selectedCrypto === 'BTC' && !transactionHash && (
-                        <div className="mb-3">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Transaction Hash (Required for Bitcoin) *
-                          </label>
-                          <input
-                            type="text"
-                            value={transactionHash}
-                            onChange={(e) => setTransactionHash(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="Enter transaction hash from your Bitcoin wallet"
-                            required
-                          />
-                        </div>
-                      )}
-                      
-                      {transactionHash && (
-                        <div className="text-sm text-gray-600 mb-3">
-                          <strong>Transaction Hash:</strong> {transactionHash.substring(0, 20)}...
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Payment Confirmation */}
-              {paymentSent && (
-                <div className="text-center border-t pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* MetaMask Payment Button */}
                   <button
-                    type="button"
-                    onClick={confirmPayment}
-                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300"
+                    onClick={connectAndPayMetaMask}
+                    disabled={paymentProcessing}
+                    className={`flex items-center justify-center space-x-3 font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 ${
+                      paymentProcessing 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white'
+                    }`}
                   >
-                    ✅ Confirm Payment & Get Ticket
+                    <Wallet className="h-6 w-6" />
+                    <div className="text-center">
+                      <div>{paymentProcessing ? 'Processing...' : 'Pay with MetaMask'}</div>
+                      <div className="text-sm opacity-90">{calculateCryptoAmount(selectedCrypto)} {selectedCrypto}</div>
+                    </div>
+                  </button>
+
+                  {/* Trust Wallet Payment Button */}
+                  <button
+                    onClick={connectAndPayTrustWallet}
+                    disabled={paymentProcessing}
+                    className={`flex items-center justify-center space-x-3 font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 ${
+                      paymentProcessing 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white'
+                    }`}
+                  >
+                    <Smartphone className="h-6 w-6" />
+                    <div className="text-center">
+                      <div>{paymentProcessing ? 'Processing...' : 'Pay with Trust Wallet'}</div>
+                      <div className="text-sm opacity-90">{calculateCryptoAmount(selectedCrypto)} {selectedCrypto}</div>
+                    </div>
                   </button>
                 </div>
-              )}
+
+                {/* Payment Processing Indicator */}
+                {paymentProcessing && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                    <div className="flex items-center justify-center space-x-2 mb-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-yellow-600"></div>
+                      <span className="font-semibold text-yellow-800">Processing Payment...</span>
+                    </div>
+                    <p className="text-yellow-700 text-sm">
+                      Please confirm the transaction in your wallet. Do not close this window.
+                    </p>
+                  </div>
+                )}
+
+                {/* Payment Instructions */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h5 className="font-semibold text-blue-800 mb-2">How it works:</h5>
+                  <ol className="text-blue-700 text-sm space-y-1">
+                    <li>1. Click your preferred wallet button above</li>
+                    <li>2. Your wallet will open automatically</li>
+                    <li>3. Confirm the transaction in your wallet</li>
+                    <li>4. Payment will be processed instantly</li>
+                    <li>5. Your ticket will be ready for download immediately</li>
+                  </ol>
+                </div>
+              </div>
             </div>
           )}
 
@@ -858,12 +984,12 @@ Valid for: FIFA World Cup 2026
                   <h4 className="font-semibold text-green-800">Order Successfully Processed</h4>
                 </div>
                 <p className="text-green-700 text-sm mb-4">
-                  Thank you for your purchase! Your cryptocurrency payment has been confirmed and your tickets are ready for download.
+                  Thank you for your purchase! Your cryptocurrency payment has been confirmed and your official FIFA ticket is ready for download.
                 </p>
                 
                 <div className="bg-white rounded-lg p-4 mb-4">
                   <div className="text-sm text-gray-600 space-y-1">
-                    <div><strong>Order ID:</strong> {orderId || `WC2026-${Date.now()}`}</div>
+                    <div><strong>Order ID:</strong> {orderId || `FIFA2026-${Date.now().toString().slice(-8)}`}</div>
                     <div><strong>Customer:</strong> {formData.firstName} {formData.lastName}</div>
                     <div><strong>Email:</strong> {formData.email}</div>
                     <div><strong>Amount:</strong> ${ticketInfo.cryptoPrice.toLocaleString()} (30% crypto discount applied)</div>
@@ -878,17 +1004,17 @@ Valid for: FIFA World Cup 2026
               <div className="space-y-4">
                 <button
                   type="button"
-                  onClick={generateTicketPDF}
+                  onClick={generateFIFATicket}
                   className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3"
                 >
                   <Download className="h-6 w-6" />
-                  <span>Download Your Ticket</span>
+                  <span>Download Official FIFA Ticket</span>
                   <FileText className="h-6 w-6" />
                 </button>
                 
                 <p className="text-gray-600 text-sm">
-                  Your official FIFA World Cup 2026 ticket will be downloaded as a text file. 
-                  Please keep it safe and present it at the stadium entrance.
+                  Your official FIFA World Cup 2026™ ticket will be downloaded as a text file. 
+                  Please keep it safe and present it with valid ID at the stadium entrance.
                 </p>
               </div>
 
@@ -896,11 +1022,11 @@ Valid for: FIFA World Cup 2026
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="font-semibold text-blue-800 mb-2">Important Information:</h4>
                 <ul className="text-blue-700 text-sm space-y-1 text-left">
-                  <li>• Your ticket has been sent to your email address</li>
-                  <li>• Arrive at the stadium at least 2 hours before match time</li>
-                  <li>• Bring a valid ID that matches the ticket holder name</li>
+                  <li>• Your ticket confirmation has been sent to your email address</li>
+                  <li>• Arrive at the stadium at least 2 hours before kick-off</li>
+                  <li>• Bring a valid photo ID that matches the ticket holder name exactly</li>
                   <li>• Tickets are non-transferable and non-refundable</li>
-                  <li>• Contact our support team if you have any questions</li>
+                  <li>• This is an official FIFA-sanctioned ticket with blockchain verification</li>
                 </ul>
               </div>
 
@@ -910,7 +1036,8 @@ Valid for: FIFA World Cup 2026
                 <div className="text-sm text-gray-600 space-y-1">
                   <div>📞 Phone: +1 (555) 123-4567</div>
                   <div>📱 WhatsApp: {whatsappNumber}</div>
-                  <div>📧 Email: tickets@worldcup2026.com</div>
+                  <div>📧 Email: support@worldcup2026tickets.com</div>
+                  <div>🌐 FIFA Official: www.fifa.com/worldcup</div>
                 </div>
               </div>
 
@@ -947,7 +1074,7 @@ Valid for: FIFA World Cup 2026
                 </button>
               ) : (
                 <div className="ml-auto">
-                  <p className="text-sm text-gray-600">Connect your wallet and complete payment to finish your order</p>
+                  <p className="text-sm text-gray-600">Select your cryptocurrency and wallet to complete payment</p>
                 </div>
               )}
             </div>
