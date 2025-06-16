@@ -71,7 +71,7 @@ const Footer: React.FC = () => {
           </div>
         </div>
 
-        {/* Crypto Wallet Info */}
+        {/* Crypto Payment Info */}
         <div className="border-t border-blue-700 mt-8 pt-8">
           <div className="bg-green-900 bg-opacity-50 rounded-lg p-4">
             <h4 className="text-lg font-semibold text-green-300 mb-2 flex items-center space-x-2">
@@ -79,13 +79,10 @@ const Footer: React.FC = () => {
               <span>Cryptocurrency Payments - 30% Discount</span>
             </h4>
             <p className="text-green-200 text-sm mb-2">
-              Pay with crypto and save 30%! Send payments to our secure wallet:
+              Pay with cryptocurrency and save 30%! We accept all major cryptocurrencies through our secure payment gateway.
             </p>
-            <div className="bg-black bg-opacity-30 rounded-lg p-3 font-mono text-sm text-green-300 break-all">
-              0x62468C025d2738eDB2662B9994F52Af0Afa17c9d
-            </div>
             <p className="text-green-200 text-xs mt-2">
-              Accepts ETH, BTC, USDT and other major cryptocurrencies
+              Accepts BTC, ETH, USDT, USDC, LTC, BCH and 100+ other cryptocurrencies
             </p>
           </div>
         </div>
