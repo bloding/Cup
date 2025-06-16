@@ -77,7 +77,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
     agreeMarketing: false
   });
 
-  const whatsappNumber = '+15551234567';
+  const whatsappNumber = '+34632800363';
 
   // Create NOWPayments payment
   const createNOWPayment = async () => {
@@ -303,7 +303,7 @@ FIFA Headquarters: +41 43 222 7777
 FIFA Ticket Portal: tickets.fifa.com
 
 🎫 AUTHORIZED TICKET VENDOR SUPPORT:
-Customer Service: +1 (555) 123-4567
+Customer Service: +34632800363
 WhatsApp Support: ${whatsappNumber}
 Email Support: support@worldcup2026tickets.com
 Operating Hours: 24/7 Customer Service Available
@@ -605,7 +605,7 @@ Verification Code: ${securityCode}
                     value={formData.phone}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="+1 (555) 123-4567"
+                    placeholder="+34632800363"
                     required
                   />
                 </div>
@@ -939,7 +939,7 @@ Verification Code: ${securityCode}
               <div className="bg-gray-50 rounded-lg p-4">
                 <h4 className="font-semibold text-gray-800 mb-2">Need Help?</h4>
                 <div className="text-sm text-gray-600 space-y-1">
-                  <div>📞 Phone: +1 (555) 123-4567</div>
+                  <div>📞 Phone: +34632800363</div>
                   <div>📱 WhatsApp: {whatsappNumber}</div>
                   <div>📧 Email: support@worldcup2026tickets.com</div>
                   <div>🌐 FIFA Official: www.fifa.com/worldcup</div>

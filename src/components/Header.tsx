@@ -25,7 +25,7 @@ const Header: React.FC = () => {
             <a href="#venues" className="hover:text-yellow-400 transition-colors duration-200">Venues</a>
             <div className="flex items-center space-x-2 bg-green-600 px-3 py-1 rounded-full text-sm">
               <Phone className="h-4 w-4" />
-              <span>+1 (555) 123-4567</span>
+              <span>+34632800363</span>
             </div>
           </nav>
 
@@ -48,7 +48,7 @@ const Header: React.FC = () => {
               <a href="#venues" className="hover:text-yellow-400 transition-colors duration-200">Venues</a>
               <div className="flex items-center space-x-2 bg-green-600 px-3 py-2 rounded-full text-sm w-fit">
                 <Phone className="h-4 w-4" />
-                <span>+1 (555) 123-4567</span>
+                <span>+34632800363</span>
               </div>
             </nav>
           </div>
