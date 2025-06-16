@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, User, Mail, Phone, MapPin, Calendar, Check, Copy, ExternalLink, Smartphone, Download, FileText, CreditCard, Shield, Info, DollarSign, Wallet } from 'lucide-react';
+import jsPDF from 'jspdf';
 
 interface RegistrationFormProps {
   isOpen: boolean;
@@ -137,7 +138,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
         checkPaymentStatus(result.payment_id);
         
         // Show success message
-        alert('تم إنشاء صفحة الدفع بنجاح! يمكنك الآن الدفع باستخدام محفظة الكريبتو الخاصة بك (MetaMask, Trust Wallet, إلخ)');
+        alert('Payment page created successfully! You can now pay using your crypto wallet (MetaMask, Trust Wallet, etc.)');
         
       } else {
         throw new Error('Failed to create payment');
@@ -153,7 +154,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
       const orderIdGenerated = orderId || `FIFA2026-${Date.now().toString().slice(-8)}`;
       setOrderId(orderIdGenerated);
       
-      alert(`تم إنشاء الطلب بنجاح!\n\nرقم الطلب: ${orderIdGenerated}\nالمبلغ: $${ticketInfo.cryptoPrice}\n\nيرجى التواصل معنا عبر WhatsApp: ${whatsappNumber} لإكمال الدفع`);
+      alert(`Order created successfully!\n\nOrder ID: ${orderIdGenerated}\nAmount: $${ticketInfo.cryptoPrice}\n\nPlease contact us via WhatsApp: ${whatsappNumber} to complete payment`);
       
       // Move to confirmation step
       setCurrentStep(5);
@@ -176,7 +177,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
         if (result.payment_status === 'finished' || result.payment_status === 'confirmed') {
           setPaymentConfirmed(true);
           setCurrentStep(5);
-          alert('تم تأكيد الدفع بنجاح! 🎉');
+          alert('Payment confirmed successfully! 🎉');
           return;
         }
         
@@ -192,8 +193,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
     }
   };
 
-  // Generate realistic FIFA ticket
-  const generateFIFATicket = () => {
+  // Generate FIFA ticket as PDF
+  const generateFIFATicketPDF = () => {
     const orderIdGenerated = orderId || `FIFA2026-${Date.now().toString().slice(-8)}`;
     setOrderId(orderIdGenerated);
 
@@ -205,266 +206,243 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
     // Parse match information from ticket title
     const isMatch = ticketInfo.type === 'match';
     
-    const ticketContent = `
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                          FIFA WORLD CUP 2026™                               ║
-║                           OFFICIAL MATCH TICKET                              ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-
-🏆 TOURNAMENT: FIFA World Cup 2026™
-🌍 HOST COUNTRIES: United States • Canada • Mexico
-📅 TOURNAMENT PERIOD: June 11 - July 19, 2026
-
-═══════════════════════════════════════════════════════════════════════════════
-
-🎫 ${isMatch ? 'MATCH' : 'PACKAGE'} DETAILS:
-${ticketInfo.title}
-
-📍 VENUE INFORMATION:
-${isMatch ? `
-Stadium: [Stadium will be confirmed closer to match date]
-City: [City will be confirmed based on match schedule]
-Country: USA/Canada/Mexico
-
-⏰ MATCH SCHEDULE:
-Date: [To be confirmed by FIFA]
-Kick-off Time: [Local time will be announced]
-Gates Open: 2 hours before kick-off
-` : `
-Package Type: ${ticketInfo.title}
-Multiple Venues: Various stadiums across USA, Canada & Mexico
-Tournament Access: As per package inclusions
-`}
-
-═══════════════════════════════════════════════════════════════════════════════
-
-👤 TICKET HOLDER INFORMATION:
-Full Name: ${formData.firstName.toUpperCase()} ${formData.lastName.toUpperCase()}
-Email Address: ${formData.email}
-Phone Number: ${formData.phone}
-Date of Birth: ${formData.dateOfBirth || 'Not provided'}
-Nationality: ${formData.nationality || 'Not specified'}
-
-📮 BILLING ADDRESS:
-Street Address: ${formData.address}
-City: ${formData.city}
-Country: ${formData.country}
-Postal Code: ${formData.postalCode || 'Not provided'}
-
-═══════════════════════════════════════════════════════════════════════════════
-
-💰 PAYMENT CONFIRMATION:
-Order ID: ${orderIdGenerated}
-NOWPayments Transaction ID: ${paymentId || 'Processing'}
-Transaction Date: ${new Date().toLocaleString('en-US', { 
-  year: 'numeric', 
-  month: 'long', 
-  day: 'numeric', 
-  hour: '2-digit', 
-  minute: '2-digit',
-  timeZoneName: 'short'
-})}
-
-💵 PRICING BREAKDOWN:
-Original Price: $${ticketInfo.price.toLocaleString()} USD
-Cryptocurrency Discount (30%): -$${(ticketInfo.price - ticketInfo.cryptoPrice).toLocaleString()} USD
-Final Amount Paid: $${ticketInfo.cryptoPrice.toLocaleString()} USD
-
-💎 CRYPTOCURRENCY PAYMENT DETAILS:
-Payment Gateway: NOWPayments (Official)
-Payment Status: ✅ CONFIRMED & VERIFIED
-Payment Method: Cryptocurrency Wallet
-Blockchain Verified: YES
-Wallet Compatible: MetaMask, Trust Wallet, Coinbase Wallet, etc.
-
-═══════════════════════════════════════════════════════════════════════════════
-
-🎫 TICKET AUTHENTICATION & SECURITY:
-Ticket ID: ${orderIdGenerated}
-Security Code: ${securityCode}
-QR Code Data: ${qrCode}
-Barcode: ${barcode}
-Issue Date: ${new Date().toLocaleDateString('en-US')}
-Issue Time: ${new Date().toLocaleTimeString('en-US')}
-
-🔐 ANTI-COUNTERFEITING FEATURES:
-• Unique holographic security elements
-• Embedded RFID chip for stadium entry
-• Blockchain-verified authenticity certificate
-• FIFA official watermark and seal
-• Tamper-evident security printing
-• Digital signature verification
-
-═══════════════════════════════════════════════════════════════════════════════
-
-📋 IMPORTANT MATCH DAY INFORMATION:
-
-🚪 STADIUM ENTRY REQUIREMENTS:
-• Arrive at stadium minimum 2 hours before kick-off
-• Present this ticket AND valid government-issued photo ID
-• ID must match ticket holder name EXACTLY
-• Children under 16 must be accompanied by adult ticket holder
-• Ticket holder must enter stadium personally (non-transferable)
-
-🚫 PROHIBITED ITEMS (Strictly Enforced):
-• Outside food and beverages of any kind
-• Professional cameras and recording equipment
-• Weapons, sharp objects, or dangerous items
-• Alcohol (available for purchase inside stadium)
-• Flags or banners larger than 2m x 1m
-• Laser pointers, flares, or pyrotechnics
-• Glass containers or metal bottles
-
-✅ PERMITTED ITEMS:
-• Small personal bags (subject to security search)
-• Mobile phones and small personal cameras
-• Prescription medications with valid prescription
-• Small national flags and team scarves
-• Sunglasses and sun hats
-• Empty plastic water bottles (refill stations available)
-
-🎯 STADIUM FACILITIES & SERVICES:
-• Wheelchair accessible seating and facilities
-• Food and beverage concessions (multiple cuisines)
-• Official FIFA merchandise stores
-• First aid and medical facilities
-• Lost and found services
-• Multi-language customer service
-• Prayer/meditation rooms
-• Baby changing facilities
-
-═══════════════════════════════════════════════════════════════════════════════
-
-⚠️  TERMS AND CONDITIONS:
-
-🔄 TICKET TRANSFER & RESALE POLICY:
-• Tickets are STRICTLY NON-TRANSFERABLE
-• Resale is PROHIBITED and will result in ticket cancellation
-• Only original purchaser may use this ticket
-• FIFA reserves right to cancel fraudulent or resold tickets
-• Ticket sharing or lending is not permitted
-
-💸 REFUND & EXCHANGE POLICY:
-• NO REFUNDS under any circumstances
-• NO EXCHANGES permitted after purchase
-• Weather delays do not qualify for refunds
-• Match postponements will honor original tickets
-• Force majeure events subject to FIFA discretion
-
-🏟️ STADIUM REGULATIONS & CONDUCT:
-• Follow all stadium staff and security instructions
-• Respect other spectators, players, and officials
-• No discriminatory, offensive, or abusive behavior
-• Smoking prohibited throughout stadium premises
-• Comply with all local laws and FIFA regulations
-• Violation may result in ejection without refund
-
-═══════════════════════════════════════════════════════════════════════════════
-
-📞 CUSTOMER SUPPORT & EMERGENCY CONTACTS:
-
-🌐 FIFA OFFICIAL CHANNELS:
-Website: www.fifa.com/worldcup
-Official Email: tickets@fifa.com
-FIFA Headquarters: +41 43 222 7777
-FIFA Ticket Portal: tickets.fifa.com
-
-🎫 AUTHORIZED TICKET VENDOR SUPPORT:
-Customer Service: ${whatsappNumber}
-WhatsApp Support: ${whatsappNumber}
-Email Support: support@worldcup2026tickets.com
-Operating Hours: 24/7 Customer Service Available
-
-🚨 MATCH DAY EMERGENCY CONTACTS:
-Match Day Hotline: [Provided 48 hours before match]
-Stadium Security: [Available on match day]
-Medical Emergency: [Stadium medical team]
-Local Emergency Services: 911 (USA/Canada/Mexico)
-
-═══════════════════════════════════════════════════════════════════════════════
-
-🏆 FIFA WORLD CUP 2026™ - BIGGER. BETTER. TOGETHER.
-
-This ticket grants access to the FIFA World Cup 2026™ ${isMatch ? 'match' : 'package'} specified above.
-This is an official FIFA-sanctioned ticket purchased through an authorized vendor.
-Ticket authenticity can be verified at: verify.fifa.com/tickets
-
-⚡ BLOCKCHAIN VERIFIED: This ticket's authenticity is permanently recorded on blockchain
-🔒 SECURE PURCHASE: Payment processed through encrypted cryptocurrency transaction
-🌟 PREMIUM EXPERIENCE: Welcome to the greatest football celebration on Earth
-🎉 HISTORIC TOURNAMENT: First World Cup with 48 teams across 3 countries
-
-═══════════════════════════════════════════════════════════════════════════════
-
-📄 LEGAL DISCLAIMER & LIABILITY:
-This ticket is issued subject to FIFA regulations, local stadium policies, and applicable laws.
-FIFA, its partners, and authorized vendors are not liable for indirect or consequential damages.
-By using this ticket, holder agrees to be filmed/photographed for broadcast purposes.
-Ticket holder assumes all risks associated with attending the event.
-Entry to stadium constitutes acceptance of all terms and conditions.
-
-🎭 FIFA FAIR PLAY & CONDUCT POLICY:
-FIFA promotes respect, diversity, inclusion, and fair play at all events.
-Discriminatory behavior, violence, or disruption will result in immediate ejection.
-Help create a positive, safe, and enjoyable atmosphere for all spectators.
-Report any inappropriate behavior to stadium security immediately.
-
-🌍 SUSTAINABILITY COMMITMENT:
-FIFA World Cup 2026™ is committed to environmental sustainability.
-Please use public transportation when possible and recycle responsibly.
-Digital tickets help reduce paper waste - thank you for your support.
-
-═══════════════════════════════════════════════════════════════════════════════
-
-📊 TICKET STATISTICS & INFORMATION:
-Total Tournament Matches: 104
-Participating Teams: 48
-Host Cities: 16 across USA, Canada & Mexico
-Expected Attendance: 5+ million spectators
-Languages Supported: 10+ official languages
-
-🎪 CULTURAL CELEBRATION:
-Experience the fusion of three cultures in one tournament
-Enjoy diverse food, music, and traditions from North America
-Witness history as the largest World Cup ever held
-
-═══════════════════════════════════════════════════════════════════════════════
-
-Generated: ${new Date().toLocaleString('en-US', { 
-  weekday: 'long',
-  year: 'numeric', 
-  month: 'long', 
-  day: 'numeric', 
-  hour: '2-digit', 
-  minute: '2-digit',
-  second: '2-digit',
-  timeZoneName: 'long'
-})}
-
-Valid for: FIFA World Cup 2026™ Tournament
-Issued by: Official FIFA Authorized Ticket Portal
-Verification Code: ${securityCode}
-NOWPayments Gateway: Verified & Secured
-
-⚠️  KEEP THIS TICKET SAFE - IT IS YOUR ENTRY TO THE MATCH! ⚠️
-🎫 Present this ticket with matching photo ID at stadium entrance 🎫
-
-╔══════════════════════════════════════════════════════════════════════════════╗
-║  © FIFA 2026. FIFA World Cup 2026™ and all related marks are trademarks    ║
-║  of FIFA. All rights reserved. Unauthorized reproduction is prohibited.      ║
-║  This ticket is valid only for the specified match/package and date.        ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-    `;
-
-    const blob = new Blob([ticketContent], { type: 'text/plain;charset=utf-8' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `FIFA_WorldCup_2026_Official_Ticket_${formData.firstName}_${formData.lastName}_${orderIdGenerated}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    // Create PDF
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    
+    // Set font
+    pdf.setFont('helvetica');
+    
+    // Header - FIFA World Cup 2026
+    pdf.setFillColor(0, 51, 153); // FIFA Blue
+    pdf.rect(0, 0, 210, 40, 'F');
+    
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(24);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('FIFA WORLD CUP 2026™', 105, 20, { align: 'center' });
+    
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('OFFICIAL MATCH TICKET', 105, 30, { align: 'center' });
+    
+    // Tournament Info
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(10);
+    pdf.text('HOST COUNTRIES: United States • Canada • Mexico', 105, 50, { align: 'center' });
+    pdf.text('TOURNAMENT PERIOD: June 11 - July 19, 2026', 105, 57, { align: 'center' });
+    
+    // Ticket Details Section
+    pdf.setFillColor(240, 240, 240);
+    pdf.rect(10, 70, 190, 30, 'F');
+    
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`${isMatch ? 'MATCH' : 'PACKAGE'} DETAILS:`, 15, 80);
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    const titleLines = pdf.splitTextToSize(ticketInfo.title, 180);
+    pdf.text(titleLines, 15, 88);
+    
+    // Venue Information
+    let yPos = 110;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text('VENUE INFORMATION:', 15, yPos);
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    yPos += 8;
+    
+    if (isMatch) {
+      pdf.text('Stadium: [Stadium will be confirmed closer to match date]', 15, yPos);
+      yPos += 6;
+      pdf.text('City: [City will be confirmed based on match schedule]', 15, yPos);
+      yPos += 6;
+      pdf.text('Country: USA/Canada/Mexico', 15, yPos);
+      yPos += 10;
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('MATCH SCHEDULE:', 15, yPos);
+      pdf.setFont('helvetica', 'normal');
+      yPos += 8;
+      pdf.text('Date: [To be confirmed by FIFA]', 15, yPos);
+      yPos += 6;
+      pdf.text('Kick-off Time: [Local time will be announced]', 15, yPos);
+      yPos += 6;
+      pdf.text('Gates Open: 2 hours before kick-off', 15, yPos);
+    } else {
+      pdf.text(`Package Type: ${ticketInfo.title}`, 15, yPos);
+      yPos += 6;
+      pdf.text('Multiple Venues: Various stadiums across USA, Canada & Mexico', 15, yPos);
+      yPos += 6;
+      pdf.text('Tournament Access: As per package inclusions', 15, yPos);
+    }
+    
+    yPos += 15;
+    
+    // Ticket Holder Information
+    pdf.setFillColor(240, 240, 240);
+    pdf.rect(10, yPos, 190, 40, 'F');
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text('TICKET HOLDER INFORMATION:', 15, yPos + 8);
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text(`Full Name: ${formData.firstName.toUpperCase()} ${formData.lastName.toUpperCase()}`, 15, yPos + 16);
+    pdf.text(`Email Address: ${formData.email}`, 15, yPos + 22);
+    pdf.text(`Phone Number: ${formData.phone}`, 15, yPos + 28);
+    pdf.text(`Date of Birth: ${formData.dateOfBirth || 'Not provided'}`, 15, yPos + 34);
+    
+    yPos += 50;
+    
+    // Billing Address
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text('BILLING ADDRESS:', 15, yPos);
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    yPos += 8;
+    pdf.text(`Street Address: ${formData.address}`, 15, yPos);
+    yPos += 6;
+    pdf.text(`City: ${formData.city}`, 15, yPos);
+    yPos += 6;
+    pdf.text(`Country: ${formData.country}`, 15, yPos);
+    yPos += 6;
+    pdf.text(`Postal Code: ${formData.postalCode || 'Not provided'}`, 15, yPos);
+    
+    yPos += 15;
+    
+    // Payment Confirmation
+    pdf.setFillColor(220, 255, 220);
+    pdf.rect(10, yPos, 190, 35, 'F');
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text('PAYMENT CONFIRMATION:', 15, yPos + 8);
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text(`Order ID: ${orderIdGenerated}`, 15, yPos + 16);
+    pdf.text(`NOWPayments Transaction ID: ${paymentId || 'Processing'}`, 15, yPos + 22);
+    pdf.text(`Transaction Date: ${new Date().toLocaleString('en-US')}`, 15, yPos + 28);
+    
+    yPos += 45;
+    
+    // Pricing Breakdown
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text('PRICING BREAKDOWN:', 15, yPos);
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    yPos += 8;
+    pdf.text(`Original Price: $${ticketInfo.price.toLocaleString()} USD`, 15, yPos);
+    yPos += 6;
+    pdf.text(`Cryptocurrency Discount (30%): -$${(ticketInfo.price - ticketInfo.cryptoPrice).toLocaleString()} USD`, 15, yPos);
+    yPos += 6;
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`Final Amount Paid: $${ticketInfo.cryptoPrice.toLocaleString()} USD`, 15, yPos);
+    
+    // Add new page for additional information
+    pdf.addPage();
+    
+    // Security Information
+    pdf.setFillColor(255, 240, 240);
+    pdf.rect(10, 20, 190, 30, 'F');
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text('TICKET AUTHENTICATION & SECURITY:', 15, 30);
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text(`Ticket ID: ${orderIdGenerated}`, 15, 38);
+    pdf.text(`Security Code: ${securityCode}`, 15, 44);
+    pdf.text(`QR Code Data: ${qrCode}`, 15, 50);
+    
+    yPos = 65;
+    
+    // Important Information
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text('IMPORTANT MATCH DAY INFORMATION:', 15, yPos);
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    yPos += 10;
+    
+    const importantInfo = [
+      'STADIUM ENTRY REQUIREMENTS:',
+      '• Arrive at stadium minimum 2 hours before kick-off',
+      '• Present this ticket AND valid government-issued photo ID',
+      '• ID must match ticket holder name EXACTLY',
+      '• Children under 16 must be accompanied by adult ticket holder',
+      '',
+      'PROHIBITED ITEMS:',
+      '• Outside food and beverages of any kind',
+      '• Professional cameras and recording equipment',
+      '• Weapons, sharp objects, or dangerous items',
+      '• Alcohol (available for purchase inside stadium)',
+      '',
+      'TERMS AND CONDITIONS:',
+      '• Tickets are STRICTLY NON-TRANSFERABLE',
+      '• Resale is PROHIBITED and will result in ticket cancellation',
+      '• NO REFUNDS under any circumstances',
+      '• Weather delays do not qualify for refunds'
+    ];
+    
+    importantInfo.forEach(line => {
+      if (line.startsWith('•') || line === '') {
+        pdf.text(line, 20, yPos);
+      } else {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(line, 15, yPos);
+        pdf.setFont('helvetica', 'normal');
+      }
+      yPos += 6;
+      
+      if (yPos > 270) {
+        pdf.addPage();
+        yPos = 20;
+      }
+    });
+    
+    // Contact Information
+    yPos += 10;
+    if (yPos > 250) {
+      pdf.addPage();
+      yPos = 20;
+    }
+    
+    pdf.setFillColor(240, 248, 255);
+    pdf.rect(10, yPos, 190, 25, 'F');
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text('CUSTOMER SUPPORT & EMERGENCY CONTACTS:', 15, yPos + 8);
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text(`Customer Service: ${whatsappNumber}`, 15, yPos + 16);
+    pdf.text(`WhatsApp Support: ${whatsappNumber}`, 15, yPos + 22);
+    
+    // Footer
+    yPos += 35;
+    pdf.setFillColor(0, 51, 153);
+    pdf.rect(10, yPos, 190, 20, 'F');
+    
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(8);
+    pdf.text('© FIFA 2026. FIFA World Cup 2026™ and all related marks are trademarks of FIFA.', 105, yPos + 8, { align: 'center' });
+    pdf.text('This ticket is valid only for the specified match/package and date.', 105, yPos + 14, { align: 'center' });
+    
+    // Save PDF
+    const fileName = `FIFA_WorldCup_2026_Official_Ticket_${formData.firstName}_${formData.lastName}_${orderIdGenerated}.pdf`;
+    pdf.save(fileName);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -1008,16 +986,16 @@ NOWPayments Gateway: Verified & Secured
               <div className="space-y-4">
                 <button
                   type="button"
-                  onClick={generateFIFATicket}
+                  onClick={generateFIFATicketPDF}
                   className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3"
                 >
                   <Download className="h-6 w-6" />
-                  <span>Download Official FIFA Ticket</span>
+                  <span>Download Official FIFA Ticket (PDF)</span>
                   <FileText className="h-6 w-6" />
                 </button>
                 
                 <p className="text-gray-600 text-sm">
-                  Your official FIFA World Cup 2026™ ticket will be downloaded as a text file. 
+                  Your official FIFA World Cup 2026™ ticket will be downloaded as a PDF file. 
                   Please keep it safe and present it with valid ID at the stadium entrance.
                 </p>
               </div>
