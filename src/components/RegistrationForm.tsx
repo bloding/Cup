@@ -122,7 +122,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
     } catch (error) {
       setPaymentProcessing(false);
       console.error('Error creating payment:', error);
-      alert('❌ خطأ في إنشاء الدفعة. يرجى المحاولة مرة أخرى أو الاتصال بالدعم.');
+      alert('Error creating payment. Please try again or contact support.');
     }
   };
 
@@ -349,54 +349,54 @@ Issued by: Official FIFA Ticket Portal
     switch (step) {
       case 1:
         if (!formData.firstName.trim()) {
-          alert('يرجى إدخال الاسم الأول');
+          alert('Please enter your first name');
           return false;
         }
         if (!formData.lastName.trim()) {
-          alert('يرجى إدخال اسم العائلة');
+          alert('Please enter your last name');
           return false;
         }
         if (!formData.email.trim()) {
-          alert('يرجى إدخال عنوان البريد الإلكتروني');
+          alert('Please enter your email address');
           return false;
         }
         if (!formData.confirmEmail.trim()) {
-          alert('يرجى تأكيد عنوان البريد الإلكتروني');
+          alert('Please confirm your email address');
           return false;
         }
         if (formData.email !== formData.confirmEmail) {
-          alert('عناوين البريد الإلكتروني غير متطابقة');
+          alert('Email addresses do not match');
           return false;
         }
         if (!formData.phone.trim()) {
-          alert('يرجى إدخال رقم الهاتف');
+          alert('Please enter your phone number');
           return false;
         }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(formData.email)) {
-          alert('يرجى إدخال عنوان بريد إلكتروني صحيح');
+          alert('Please enter a valid email address');
           return false;
         }
         return true;
       
       case 2:
         if (!formData.address.trim()) {
-          alert('يرجى إدخال عنوان الشارع');
+          alert('Please enter your street address');
           return false;
         }
         if (!formData.city.trim()) {
-          alert('يرجى إدخال المدينة');
+          alert('Please enter your city');
           return false;
         }
         if (!formData.country.trim()) {
-          alert('يرجى اختيار البلد');
+          alert('Please select your country');
           return false;
         }
         return true;
       
       case 3:
         if (!formData.agreeTerms) {
-          alert('يرجى الموافقة على الشروط والأحكام للمتابعة');
+          alert('Please agree to the terms and conditions to continue');
           return false;
         }
         return true;
@@ -425,7 +425,7 @@ Issued by: Official FIFA Ticket Portal
         <div className="flex justify-between items-center p-6 border-b bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-t-2xl">
           <div>
             <h2 className="text-2xl font-bold">
-              {currentStep === 5 ? '🎉 تم تأكيد الدفع!' : 'أكمل التسجيل'}
+              {currentStep === 5 ? '🎉 Payment Confirmed!' : 'Complete Registration'}
             </h2>
             <p className="text-blue-200 text-sm">{ticketInfo.title}</p>
           </div>
@@ -441,12 +441,12 @@ Issued by: Official FIFA Ticket Portal
         {currentStep < 5 && (
           <div className="px-6 py-4 bg-gray-50">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-600">الخطوة {currentStep} من 4</span>
+              <span className="text-sm font-medium text-gray-600">Step {currentStep} of 4</span>
               <span className="text-sm text-gray-500">
-                {currentStep === 1 && 'المعلومات الشخصية'}
-                {currentStep === 2 && 'تفاصيل العنوان'}
-                {currentStep === 3 && 'الشروط والأحكام'}
-                {currentStep === 4 && 'الدفع بالعملة المشفرة'}
+                {currentStep === 1 && 'Personal Information'}
+                {currentStep === 2 && 'Address Details'}
+                {currentStep === 3 && 'Terms & Conditions'}
+                {currentStep === 4 && 'Crypto Payment'}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -464,14 +464,14 @@ Issued by: Official FIFA Ticket Portal
             <div className="space-y-6">
               <div className="text-center mb-6">
                 <User className="h-12 w-12 text-blue-600 mx-auto mb-2" />
-                <h3 className="text-xl font-bold text-gray-800">المعلومات الشخصية</h3>
-                <p className="text-gray-600">يرجى تقديم بياناتك الشخصية</p>
+                <h3 className="text-xl font-bold text-gray-800">Personal Information</h3>
+                <p className="text-gray-600">Please provide your personal details</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    الاسم الأول *
+                    First Name *
                   </label>
                   <input
                     type="text"
@@ -479,13 +479,13 @@ Issued by: Official FIFA Ticket Portal
                     value={formData.firstName}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="أدخل اسمك الأول"
+                    placeholder="Enter your first name"
                     required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    اسم العائلة *
+                    Last Name *
                   </label>
                   <input
                     type="text"
@@ -493,7 +493,7 @@ Issued by: Official FIFA Ticket Portal
                     value={formData.lastName}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="أدخل اسم العائلة"
+                    placeholder="Enter your last name"
                     required
                   />
                 </div>
@@ -501,7 +501,7 @@ Issued by: Official FIFA Ticket Portal
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  عنوان البريد الإلكتروني *
+                  Email Address *
                 </label>
                 <input
                   type="email"
@@ -509,14 +509,14 @@ Issued by: Official FIFA Ticket Portal
                   value={formData.email}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="أدخل عنوان بريدك الإلكتروني"
+                  placeholder="Enter your email address"
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  تأكيد عنوان البريد الإلكتروني *
+                  Confirm Email Address *
                 </label>
                 <input
                   type="email"
@@ -524,18 +524,18 @@ Issued by: Official FIFA Ticket Portal
                   value={formData.confirmEmail}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="أكد عنوان بريدك الإلكتروني"
+                  placeholder="Confirm your email address"
                   required
                 />
                 {formData.confirmEmail && formData.email !== formData.confirmEmail && (
-                  <p className="text-red-500 text-sm mt-1">عناوين البريد الإلكتروني غير متطابقة</p>
+                  <p className="text-red-500 text-sm mt-1">Email addresses do not match</p>
                 )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    رقم الهاتف *
+                    Phone Number *
                   </label>
                   <input
                     type="tel"
@@ -549,7 +549,7 @@ Issued by: Official FIFA Ticket Portal
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    تاريخ الميلاد
+                    Date of Birth
                   </label>
                   <input
                     type="date"
@@ -563,7 +563,7 @@ Issued by: Official FIFA Ticket Portal
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  الجنسية
+                  Nationality
                 </label>
                 <select
                   name="nationality"
@@ -571,7 +571,7 @@ Issued by: Official FIFA Ticket Portal
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="">اختر الجنسية</option>
+                  <option value="">Select Nationality</option>
                   {countries.map((country) => (
                     <option key={country} value={country}>{country}</option>
                   ))}
@@ -585,13 +585,13 @@ Issued by: Official FIFA Ticket Portal
             <div className="space-y-6">
               <div className="text-center mb-6">
                 <MapPin className="h-12 w-12 text-blue-600 mx-auto mb-2" />
-                <h3 className="text-xl font-bold text-gray-800">معلومات العنوان</h3>
-                <p className="text-gray-600">يرجى تقديم تفاصيل عنوانك</p>
+                <h3 className="text-xl font-bold text-gray-800">Address Information</h3>
+                <p className="text-gray-600">Please provide your address details</p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  عنوان الشارع *
+                  Street Address *
                 </label>
                 <input
                   type="text"
@@ -599,7 +599,7 @@ Issued by: Official FIFA Ticket Portal
                   value={formData.address}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="أدخل عنوان الشارع"
+                  placeholder="Enter your street address"
                   required
                 />
               </div>
@@ -607,7 +607,7 @@ Issued by: Official FIFA Ticket Portal
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    المدينة *
+                    City *
                   </label>
                   <input
                     type="text"
@@ -615,13 +615,13 @@ Issued by: Official FIFA Ticket Portal
                     value={formData.city}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="أدخل مدينتك"
+                    placeholder="Enter your city"
                     required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    الرمز البريدي
+                    Postal Code
                   </label>
                   <input
                     type="text"
@@ -629,14 +629,14 @@ Issued by: Official FIFA Ticket Portal
                     value={formData.postalCode}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="أدخل الرمز البريدي"
+                    placeholder="Enter postal code"
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  البلد *
+                  Country *
                 </label>
                 <select
                   name="country"
@@ -645,7 +645,7 @@ Issued by: Official FIFA Ticket Portal
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 >
-                  <option value="">اختر البلد</option>
+                  <option value="">Select Country</option>
                   {countries.map((country) => (
                     <option key={country} value={country}>{country}</option>
                   ))}
@@ -659,24 +659,24 @@ Issued by: Official FIFA Ticket Portal
             <div className="space-y-6">
               <div className="text-center mb-6">
                 <Check className="h-12 w-12 text-blue-600 mx-auto mb-2" />
-                <h3 className="text-xl font-bold text-gray-800">الشروط والأحكام</h3>
-                <p className="text-gray-600">يرجى مراجعة وقبول شروطنا</p>
+                <h3 className="text-xl font-bold text-gray-800">Terms and Conditions</h3>
+                <p className="text-gray-600">Please review and accept our terms</p>
               </div>
 
               {/* Order Summary */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <h4 className="font-semibold text-gray-800 mb-2">ملخص الطلب</h4>
+                <h4 className="font-semibold text-gray-800 mb-2">Order Summary</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-700">{ticketInfo.title}</span>
                     <span className="font-bold text-gray-800">${ticketInfo.price.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center text-green-600">
-                    <span className="font-semibold">خصم العملة المشفرة (30%)</span>
+                    <span className="font-semibold">Crypto Discount (30%)</span>
                     <span className="font-bold">-${(ticketInfo.price - ticketInfo.cryptoPrice).toLocaleString()}</span>
                   </div>
                   <div className="border-t pt-2 flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-800">المبلغ النهائي</span>
+                    <span className="text-lg font-bold text-gray-800">Final Amount</span>
                     <span className="text-xl font-bold text-green-600">${ticketInfo.cryptoPrice.toLocaleString()}</span>
                   </div>
                 </div>
@@ -686,10 +686,10 @@ Issued by: Official FIFA Ticket Portal
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                 <div className="flex items-center space-x-2 mb-2">
                   <div className="text-2xl">💎</div>
-                  <h4 className="font-semibold text-green-800">الدفع بالعملة المشفرة عبر NOWPayments</h4>
+                  <h4 className="font-semibold text-green-800">Crypto Payment via NOWPayments</h4>
                 </div>
                 <p className="text-green-700 text-sm">
-                  دفع آمن ومضمون عبر بوابة NOWPayments مع دعم أكثر من 100 عملة مشفرة مختلفة!
+                  Secure and guaranteed payment through NOWPayments gateway with support for 100+ different cryptocurrencies!
                 </p>
               </div>
 
@@ -705,7 +705,7 @@ Issued by: Official FIFA Ticket Portal
                     required
                   />
                   <span className="text-sm text-gray-700">
-                    أوافق على <a href="#" className="text-blue-600 hover:underline">الشروط والأحكام</a> و <a href="#" className="text-blue-600 hover:underline">سياسة الخصوصية</a> *
+                    I agree to the <a href="#" className="text-blue-600 hover:underline">Terms and Conditions</a> and <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a> *
                   </span>
                 </label>
                 <label className="flex items-start space-x-3 cursor-pointer">
@@ -717,7 +717,7 @@ Issued by: Official FIFA Ticket Portal
                     className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
                   <span className="text-sm text-gray-700">
-                    أرغب في تلقي رسائل تسويقية حول كأس العالم FIFA 2026
+                    I would like to receive marketing messages about FIFA World Cup 2026
                   </span>
                 </label>
               </div>
@@ -729,20 +729,20 @@ Issued by: Official FIFA Ticket Portal
             <div className="space-y-6">
               <div className="text-center mb-6">
                 <div className="text-4xl mb-2">💎</div>
-                <h3 className="text-xl font-bold text-gray-800">الدفع بالعملة المشفرة</h3>
-                <p className="text-gray-600">دفع آمن عبر بوابة NOWPayments</p>
+                <h3 className="text-xl font-bold text-gray-800">Crypto Payment</h3>
+                <p className="text-gray-600">Secure payment via NOWPayments gateway</p>
               </div>
 
               {/* Customer Summary */}
               <div className="bg-blue-50 rounded-lg p-4 mb-6">
-                <h4 className="font-semibold text-blue-800 mb-3">معلومات العميل</h4>
+                <h4 className="font-semibold text-blue-800 mb-3">Customer Information</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                  <div><strong>الاسم:</strong> {formData.firstName} {formData.lastName}</div>
-                  <div><strong>البريد الإلكتروني:</strong> {formData.email}</div>
-                  <div><strong>الهاتف:</strong> {formData.phone}</div>
-                  <div><strong>البلد:</strong> {formData.country}</div>
-                  {formData.nationality && <div><strong>الجنسية:</strong> {formData.nationality}</div>}
-                  {formData.dateOfBirth && <div><strong>تاريخ الميلاد:</strong> {formData.dateOfBirth}</div>}
+                  <div><strong>Name:</strong> {formData.firstName} {formData.lastName}</div>
+                  <div><strong>Email:</strong> {formData.email}</div>
+                  <div><strong>Phone:</strong> {formData.phone}</div>
+                  <div><strong>Country:</strong> {formData.country}</div>
+                  {formData.nationality && <div><strong>Nationality:</strong> {formData.nationality}</div>}
+                  {formData.dateOfBirth && <div><strong>Date of Birth:</strong> {formData.dateOfBirth}</div>}
                 </div>
               </div>
 
@@ -753,10 +753,10 @@ Issued by: Official FIFA Ticket Portal
                     ${ticketInfo.cryptoPrice.toLocaleString()} USD
                   </div>
                   <div className="text-gray-600 mb-4">
-                    (خصم 30% مطبق للدفع بالعملة المشفرة)
+                    (30% discount applied for crypto payment)
                   </div>
                   <div className="text-sm text-purple-700">
-                    يدعم أكثر من 100 عملة مشفرة: BTC, ETH, USDT, USDC, LTC, BCH وغيرها
+                    Supports 100+ cryptocurrencies: BTC, ETH, USDT, USDC, LTC, BCH and more
                   </div>
                 </div>
               </div>
@@ -775,26 +775,26 @@ Issued by: Official FIFA Ticket Portal
                   {paymentProcessing ? (
                     <>
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                      <span>جاري إنشاء الدفعة...</span>
+                      <span>Creating payment...</span>
                     </>
                   ) : (
                     <>
                       <div className="text-xl">💎</div>
-                      <span>ادفع بالعملة المشفرة - ${ticketInfo.cryptoPrice.toLocaleString()}</span>
+                      <span>Pay with Crypto - ${ticketInfo.cryptoPrice.toLocaleString()}</span>
                     </>
                   )}
                 </button>
 
                 {/* Payment Instructions */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h5 className="font-semibold text-blue-800 mb-2">كيف يعمل الدفع:</h5>
+                  <h5 className="font-semibold text-blue-800 mb-2">How payment works:</h5>
                   <ol className="text-blue-700 text-sm space-y-1">
-                    <li>1. اضغط على زر "ادفع بالعملة المشفرة"</li>
-                    <li>2. ستفتح نافذة جديدة لبوابة NOWPayments</li>
-                    <li>3. اختر العملة المشفرة المفضلة لديك</li>
-                    <li>4. أرسل المبلغ المطلوب إلى العنوان المعروض</li>
-                    <li>5. سيتم تأكيد الدفع تلقائياً</li>
-                    <li>6. ستحصل على تذكرتك فوراً بعد التأكيد</li>
+                    <li>1. Click "Pay with Crypto" button</li>
+                    <li>2. A new window will open to NOWPayments gateway</li>
+                    <li>3. Choose your preferred cryptocurrency</li>
+                    <li>4. Send the required amount to the displayed address</li>
+                    <li>5. Payment will be confirmed automatically</li>
+                    <li>6. You'll receive your ticket immediately after confirmation</li>
                   </ol>
                 </div>
 
@@ -802,11 +802,11 @@ Issued by: Official FIFA Ticket Portal
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-center space-x-2 mb-2">
                     <Shield className="h-5 w-5 text-green-600" />
-                    <h5 className="font-semibold text-green-800">دفع آمن ومضمون</h5>
+                    <h5 className="font-semibold text-green-800">Secure & Guaranteed Payment</h5>
                   </div>
                   <p className="text-green-700 text-sm">
-                    جميع المعاملات محمية بتشفير SSL وتتم معالجتها عبر بوابة NOWPayments الآمنة. 
-                    لا نحتفظ بأي معلومات حساسة خاصة بمحفظتك.
+                    All transactions are protected with SSL encryption and processed through the secure NOWPayments gateway. 
+                    We never store any sensitive wallet information.
                   </p>
                 </div>
               </div>
@@ -818,27 +818,27 @@ Issued by: Official FIFA Ticket Portal
             <div className="space-y-6 text-center">
               <div className="mb-6">
                 <div className="text-6xl mb-4">🎉</div>
-                <h3 className="text-2xl font-bold text-green-600 mb-2">تم تأكيد الدفع!</h3>
-                <p className="text-gray-600">تم تأمين تذاكر كأس العالم FIFA 2026 الخاصة بك</p>
+                <h3 className="text-2xl font-bold text-green-600 mb-2">Payment Confirmed!</h3>
+                <p className="text-gray-600">Your FIFA World Cup 2026 tickets have been secured</p>
               </div>
 
               {/* Success Message */}
               <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                 <div className="flex items-center justify-center space-x-2 mb-3">
                   <Check className="h-6 w-6 text-green-600" />
-                  <h4 className="font-semibold text-green-800">تمت معالجة الطلب بنجاح</h4>
+                  <h4 className="font-semibold text-green-800">Order Processed Successfully</h4>
                 </div>
                 <p className="text-green-700 text-sm mb-4">
-                  شكراً لك على الشراء! تم تأكيد دفعتك بالعملة المشفرة وتذكرة FIFA الرسمية جاهزة للتحميل.
+                  Thank you for your purchase! Your cryptocurrency payment has been confirmed and your official FIFA ticket is ready for download.
                 </p>
                 
                 <div className="bg-white rounded-lg p-4 mb-4">
                   <div className="text-sm text-gray-600 space-y-1">
-                    <div><strong>رقم الطلب:</strong> {orderId || `FIFA2026-${Date.now().toString().slice(-8)}`}</div>
-                    <div><strong>العميل:</strong> {formData.firstName} {formData.lastName}</div>
-                    <div><strong>البريد الإلكتروني:</strong> {formData.email}</div>
-                    <div><strong>المبلغ:</strong> ${ticketInfo.cryptoPrice.toLocaleString()} (خصم 30% للعملة المشفرة مطبق)</div>
-                    <div><strong>طريقة الدفع:</strong> NOWPayments Gateway</div>
+                    <div><strong>Order ID:</strong> {orderId || `FIFA2026-${Date.now().toString().slice(-8)}`}</div>
+                    <div><strong>Customer:</strong> {formData.firstName} {formData.lastName}</div>
+                    <div><strong>Email:</strong> {formData.email}</div>
+                    <div><strong>Amount:</strong> ${ticketInfo.cryptoPrice.toLocaleString()} (30% crypto discount applied)</div>
+                    <div><strong>Payment Method:</strong> NOWPayments Gateway</div>
                   </div>
                 </div>
               </div>
@@ -851,36 +851,36 @@ Issued by: Official FIFA Ticket Portal
                   className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3"
                 >
                   <Download className="h-6 w-6" />
-                  <span>تحميل تذكرة FIFA الرسمية</span>
+                  <span>Download Official FIFA Ticket</span>
                   <FileText className="h-6 w-6" />
                 </button>
                 
                 <p className="text-gray-600 text-sm">
-                  سيتم تحميل تذكرة كأس العالم FIFA 2026™ الرسمية كملف نصي. 
-                  يرجى الاحتفاظ بها بأمان وتقديمها مع هوية صالحة عند مدخل الملعب.
+                  Your official FIFA World Cup 2026™ ticket will be downloaded as a text file. 
+                  Please keep it safe and present it with valid ID at the stadium entrance.
                 </p>
               </div>
 
               {/* Additional Information */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-semibold text-blue-800 mb-2">معلومات مهمة:</h4>
-                <ul className="text-blue-700 text-sm space-y-1 text-right">
-                  <li>• تم إرسال تأكيد التذكرة إلى عنوان بريدك الإلكتروني</li>
-                  <li>• احضر إلى الملعب قبل ساعتين على الأقل من بداية المباراة</li>
-                  <li>• أحضر هوية صالحة تطابق اسم حامل التذكرة تماماً</li>
-                  <li>• التذاكر غير قابلة للتحويل وغير قابلة للاسترداد</li>
-                  <li>• هذه تذكرة FIFA رسمية مع التحقق من البلوك تشين</li>
+                <h4 className="font-semibold text-blue-800 mb-2">Important Information:</h4>
+                <ul className="text-blue-700 text-sm space-y-1 text-left">
+                  <li>• Ticket confirmation has been sent to your email address</li>
+                  <li>• Arrive at the stadium at least 2 hours before kick-off</li>
+                  <li>• Bring valid ID that exactly matches the ticket holder name</li>
+                  <li>• Tickets are non-transferable and non-refundable</li>
+                  <li>• This is an official FIFA ticket with blockchain verification</li>
                 </ul>
               </div>
 
               {/* Contact Support */}
               <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-800 mb-2">تحتاج مساعدة؟</h4>
+                <h4 className="font-semibold text-gray-800 mb-2">Need Help?</h4>
                 <div className="text-sm text-gray-600 space-y-1">
-                  <div>📞 الهاتف: +1 (555) 123-4567</div>
-                  <div>📱 واتساب: {whatsappNumber}</div>
-                  <div>📧 البريد الإلكتروني: support@worldcup2026tickets.com</div>
-                  <div>🌐 FIFA الرسمي: www.fifa.com/worldcup</div>
+                  <div>📞 Phone: +1 (555) 123-4567</div>
+                  <div>📱 WhatsApp: {whatsappNumber}</div>
+                  <div>📧 Email: support@worldcup2026tickets.com</div>
+                  <div>🌐 FIFA Official: www.fifa.com/worldcup</div>
                 </div>
               </div>
 
@@ -890,7 +890,7 @@ Issued by: Official FIFA Ticket Portal
                 onClick={onClose}
                 className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300"
               >
-                إغلاق
+                Close
               </button>
             </div>
           )}
@@ -904,7 +904,7 @@ Issued by: Official FIFA Ticket Portal
                   onClick={handlePrevStep}
                   className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  السابق
+                  Previous
                 </button>
               )}
               {currentStep < 4 ? (
@@ -913,11 +913,11 @@ Issued by: Official FIFA Ticket Portal
                   onClick={handleNextStep}
                   className="ml-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  التالي
+                  Next
                 </button>
               ) : (
                 <div className="ml-auto">
-                  <p className="text-sm text-gray-600">اضغط على زر الدفع لإكمال عملية الشراء</p>
+                  <p className="text-sm text-gray-600">Click the payment button to complete your purchase</p>
                 </div>
               )}
             </div>
