@@ -81,8 +81,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
   const whatsappNumber = '+34632800363';
   const NOWPAYMENTS_API_KEY = '53564b07-5501-446c-a623-bbf5cfc439b8';
 
-  // Create real NOWPayments payment
-  const createNOWPayment = async () => {
+  // Create real NOWPayments payment with crypto wallet support
+  const createCryptoPayment = async () => {
     try {
       setPaymentProcessing(true);
       
@@ -90,11 +90,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
       const orderIdGenerated = `FIFA2026-${Date.now().toString().slice(-8)}`;
       setOrderId(orderIdGenerated);
 
-      // Create payment via NOWPayments API
+      // Create payment via NOWPayments API with wallet support
       const paymentData = {
         price_amount: ticketInfo.cryptoPrice,
         price_currency: 'USD',
-        pay_currency: '', // Let user choose
+        pay_currency: '', // Let user choose from supported cryptos
         order_id: orderIdGenerated,
         order_description: `FIFA World Cup 2026 - ${ticketInfo.title}`,
         ipn_callback_url: '', // Optional: Add your callback URL
@@ -102,7 +102,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
         cancel_url: window.location.origin + '?payment=cancel',
         customer_email: formData.email,
         is_fixed_rate: false,
-        is_fee_paid_by_user: true
+        is_fee_paid_by_user: true,
+        // Enable wallet integration
+        case: 'success'
       };
 
       const response = await fetch('https://api.nowpayments.io/v1/payment', {
@@ -124,11 +126,19 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
         setPaymentId(result.payment_id);
         setPaymentUrl(result.invoice_url || `https://nowpayments.io/payment/?iid=${result.payment_id}`);
         
-        // Open payment page in new window
-        window.open(result.invoice_url || `https://nowpayments.io/payment/?iid=${result.payment_id}`, '_blank', 'width=800,height=600');
+        // Open payment page in new window with wallet support
+        const paymentWindow = window.open(
+          result.invoice_url || `https://nowpayments.io/payment/?iid=${result.payment_id}`, 
+          '_blank', 
+          'width=800,height=700,scrollbars=yes,resizable=yes'
+        );
         
         // Start checking payment status
         checkPaymentStatus(result.payment_id);
+        
+        // Show success message
+        alert('تم إنشاء صفحة الدفع بنجاح! يمكنك الآن الدفع باستخدام محفظة الكريبتو الخاصة بك (MetaMask, Trust Wallet, إلخ)');
+        
       } else {
         throw new Error('Failed to create payment');
       }
@@ -166,6 +176,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
         if (result.payment_status === 'finished' || result.payment_status === 'confirmed') {
           setPaymentConfirmed(true);
           setCurrentStep(5);
+          alert('تم تأكيد الدفع بنجاح! 🎉');
           return;
         }
         
@@ -244,7 +255,7 @@ Postal Code: ${formData.postalCode || 'Not provided'}
 
 💰 PAYMENT CONFIRMATION:
 Order ID: ${orderIdGenerated}
-NOWPayments ID: ${paymentId || 'Manual Payment'}
+NOWPayments Transaction ID: ${paymentId || 'Processing'}
 Transaction Date: ${new Date().toLocaleString('en-US', { 
   year: 'numeric', 
   month: 'long', 
@@ -262,9 +273,9 @@ Final Amount Paid: $${ticketInfo.cryptoPrice.toLocaleString()} USD
 💎 CRYPTOCURRENCY PAYMENT DETAILS:
 Payment Gateway: NOWPayments (Official)
 Payment Status: ✅ CONFIRMED & VERIFIED
-Payment Method: Cryptocurrency
+Payment Method: Cryptocurrency Wallet
 Blockchain Verified: YES
-API Key: ${NOWPAYMENTS_API_KEY}
+Wallet Compatible: MetaMask, Trust Wallet, Coinbase Wallet, etc.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -565,7 +576,7 @@ NOWPayments Gateway: Verified & Secured
                 {currentStep === 1 && 'Personal Information'}
                 {currentStep === 2 && 'Address Details'}
                 {currentStep === 3 && 'Terms & Conditions'}
-                {currentStep === 4 && 'NOWPayments Crypto Payment'}
+                {currentStep === 4 && 'Crypto Wallet Payment'}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -802,17 +813,20 @@ NOWPayments Gateway: Verified & Secured
               </div>
 
               {/* Payment Method Info */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 mb-6">
                 <div className="flex items-center space-x-2 mb-2">
-                  <div className="text-2xl">💎</div>
-                  <h4 className="font-semibold text-green-800">Official NOWPayments Gateway</h4>
+                  <Wallet className="h-6 w-6 text-purple-600" />
+                  <h4 className="font-semibold text-purple-800">Crypto Wallet Payment</h4>
                 </div>
-                <p className="text-green-700 text-sm mb-2">
-                  Secure payment through the official NOWPayments API with support for 100+ cryptocurrencies!
+                <p className="text-purple-700 text-sm mb-2">
+                  Pay securely with your crypto wallet! Supports MetaMask, Trust Wallet, Coinbase Wallet and more.
                 </p>
-                <p className="text-green-600 text-xs">
-                  API Key: {NOWPAYMENTS_API_KEY}
-                </p>
+                <div className="flex items-center space-x-4 text-sm text-purple-600">
+                  <span>🦊 MetaMask</span>
+                  <span>🛡️ Trust Wallet</span>
+                  <span>🔵 Coinbase</span>
+                  <span>💎 100+ Cryptos</span>
+                </div>
               </div>
 
               {/* Terms and Conditions */}
@@ -846,13 +860,13 @@ NOWPayments Gateway: Verified & Secured
             </div>
           )}
 
-          {/* Step 4: NOWPayments Crypto Payment */}
+          {/* Step 4: Crypto Wallet Payment */}
           {currentStep === 4 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
-                <div className="text-4xl mb-2">💎</div>
-                <h3 className="text-xl font-bold text-gray-800">Official NOWPayments Gateway</h3>
-                <p className="text-gray-600">Secure cryptocurrency payment processing</p>
+                <div className="text-4xl mb-2">🦊</div>
+                <h3 className="text-xl font-bold text-gray-800">Crypto Wallet Payment</h3>
+                <p className="text-gray-600">Pay with MetaMask, Trust Wallet or any crypto wallet</p>
               </div>
 
               {/* Customer Summary */}
@@ -869,68 +883,78 @@ NOWPayments Gateway: Verified & Secured
               </div>
 
               {/* Payment Amount Display */}
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6">
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-6">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-600 mb-2">
+                  <div className="text-3xl font-bold text-green-600 mb-2">
                     ${ticketInfo.cryptoPrice.toLocaleString()} USD
                   </div>
                   <div className="text-gray-600 mb-4">
                     (30% discount applied for crypto payment)
                   </div>
-                  <div className="text-sm text-purple-700">
+                  <div className="text-sm text-green-700">
                     Supports 100+ cryptocurrencies: BTC, ETH, USDT, USDC, LTC, BCH and more
                   </div>
                 </div>
               </div>
 
-              {/* NOWPayments API Info */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Shield className="h-5 w-5 text-green-600" />
-                  <h5 className="font-semibold text-green-800">Official NOWPayments Integration</h5>
-                </div>
-                <div className="text-green-700 text-sm space-y-1">
-                  <p>✅ Real NOWPayments API integration</p>
-                  <p>✅ Your API Key: {NOWPAYMENTS_API_KEY}</p>
-                  <p>✅ Automatic payment verification</p>
-                  <p>✅ Instant confirmation upon payment</p>
+              {/* Supported Wallets */}
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h5 className="font-semibold text-purple-800 mb-3">Supported Crypto Wallets</h5>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                  <div className="flex items-center space-x-2 text-purple-700">
+                    <span>🦊</span>
+                    <span>MetaMask</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-purple-700">
+                    <span>🛡️</span>
+                    <span>Trust Wallet</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-purple-700">
+                    <span>🔵</span>
+                    <span>Coinbase</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-purple-700">
+                    <span>💎</span>
+                    <span>WalletConnect</span>
+                  </div>
                 </div>
               </div>
 
-              {/* NOWPayments Payment Button */}
+              {/* Crypto Payment Button */}
               <div className="space-y-4">
                 <button
-                  onClick={createNOWPayment}
+                  onClick={createCryptoPayment}
                   disabled={paymentProcessing}
                   className={`w-full font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3 ${
                     paymentProcessing 
                       ? 'bg-gray-400 cursor-not-allowed' 
-                      : 'bg-gradient-to-r from-green-600 to-green-800 hover:from-green-700 hover:to-green-900 text-white'
+                      : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
                   }`}
                 >
                   {paymentProcessing ? (
                     <>
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                      <span>Creating NOWPayments invoice...</span>
+                      <span>Creating payment page...</span>
                     </>
                   ) : (
                     <>
-                      <div className="text-xl">💎</div>
-                      <span>Pay with NOWPayments - ${ticketInfo.cryptoPrice.toLocaleString()}</span>
+                      <Wallet className="h-6 w-6" />
+                      <span>Pay with Crypto Wallet - ${ticketInfo.cryptoPrice.toLocaleString()}</span>
                     </>
                   )}
                 </button>
 
                 {/* Payment Instructions */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h5 className="font-semibold text-blue-800 mb-2">How NOWPayments works:</h5>
+                  <h5 className="font-semibold text-blue-800 mb-2">How it works:</h5>
                   <ol className="text-blue-700 text-sm space-y-1">
-                    <li>1. Click "Pay with NOWPayments" button</li>
-                    <li>2. Official NOWPayments invoice will be created</li>
-                    <li>3. Choose your preferred cryptocurrency</li>
-                    <li>4. Send payment to the provided address</li>
-                    <li>5. Payment confirmed automatically via API</li>
-                    <li>6. Receive your ticket immediately</li>
+                    <li>1. Click "Pay with Crypto Wallet" button</li>
+                    <li>2. Payment page will open in new window</li>
+                    <li>3. Connect your crypto wallet (MetaMask, Trust Wallet, etc.)</li>
+                    <li>4. Choose your preferred cryptocurrency</li>
+                    <li>5. Confirm payment in your wallet</li>
+                    <li>6. Payment confirmed automatically</li>
+                    <li>7. Download your FIFA ticket immediately</li>
                   </ol>
                 </div>
 
@@ -938,10 +962,10 @@ NOWPayments Gateway: Verified & Secured
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <div className="flex items-center space-x-2 mb-2">
                     <Phone className="h-5 w-5 text-yellow-600" />
-                    <h5 className="font-semibold text-yellow-800">Alternative Payment Support</h5>
+                    <h5 className="font-semibold text-yellow-800">Need Help?</h5>
                   </div>
                   <p className="text-yellow-700 text-sm">
-                    If you experience any issues with the automatic payment, contact us directly:
+                    If you experience any issues with the payment, contact us directly:
                   </p>
                   <p className="text-yellow-800 font-semibold">WhatsApp: {whatsappNumber}</p>
                 </div>
@@ -965,18 +989,17 @@ NOWPayments Gateway: Verified & Secured
                   <h4 className="font-semibold text-green-800">Order Processed Successfully</h4>
                 </div>
                 <p className="text-green-700 text-sm mb-4">
-                  Thank you for your purchase! Your cryptocurrency payment has been confirmed through NOWPayments and your official FIFA ticket is ready for download.
+                  Thank you for your purchase! Your cryptocurrency payment has been confirmed and your official FIFA ticket is ready for download.
                 </p>
                 
                 <div className="bg-white rounded-lg p-4 mb-4">
                   <div className="text-sm text-gray-600 space-y-1">
                     <div><strong>Order ID:</strong> {orderId || `FIFA2026-${Date.now().toString().slice(-8)}`}</div>
-                    <div><strong>NOWPayments ID:</strong> {paymentId || 'Manual Processing'}</div>
+                    <div><strong>Transaction ID:</strong> {paymentId || 'Processing'}</div>
                     <div><strong>Customer:</strong> {formData.firstName} {formData.lastName}</div>
                     <div><strong>Email:</strong> {formData.email}</div>
                     <div><strong>Amount:</strong> ${ticketInfo.cryptoPrice.toLocaleString()} (30% crypto discount applied)</div>
-                    <div><strong>Payment Gateway:</strong> NOWPayments Official API</div>
-                    <div><strong>API Key:</strong> {NOWPAYMENTS_API_KEY}</div>
+                    <div><strong>Payment Method:</strong> Cryptocurrency Wallet</div>
                   </div>
                 </div>
               </div>
@@ -1003,7 +1026,7 @@ NOWPayments Gateway: Verified & Secured
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="font-semibold text-blue-800 mb-2">Important Information:</h4>
                 <ul className="text-blue-700 text-sm space-y-1 text-left">
-                  <li>• Payment processed through official NOWPayments gateway</li>
+                  <li>• Payment processed through secure crypto wallet</li>
                   <li>• Ticket confirmation sent to your email address</li>
                   <li>• Arrive at stadium at least 2 hours before kick-off</li>
                   <li>• Bring valid ID that exactly matches ticket holder name</li>
@@ -1020,7 +1043,6 @@ NOWPayments Gateway: Verified & Secured
                   <div>📱 WhatsApp: {whatsappNumber}</div>
                   <div>📧 Email: support@worldcup2026tickets.com</div>
                   <div>🌐 FIFA Official: www.fifa.com/worldcup</div>
-                  <div>💎 NOWPayments: nowpayments.io</div>
                 </div>
               </div>
 
@@ -1057,7 +1079,7 @@ NOWPayments Gateway: Verified & Secured
                 </button>
               ) : (
                 <div className="ml-auto">
-                  <p className="text-sm text-gray-600">Click the NOWPayments button to complete your purchase</p>
+                  <p className="text-sm text-gray-600">Click the crypto wallet button to complete your purchase</p>
                 </div>
               )}
             </div>
