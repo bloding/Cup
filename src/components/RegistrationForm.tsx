@@ -89,21 +89,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
       setOrderId(orderIdGenerated);
 
       // Simulate NOWPayments API call
-      // In production, this would be a real API call to NOWPayments
-      const paymentData = {
-        price_amount: ticketInfo.cryptoPrice,
-        price_currency: 'USD',
-        pay_currency: '', // Let user choose
-        order_id: orderIdGenerated,
-        order_description: ticketInfo.title,
-        success_url: window.location.origin + '/payment-success',
-        cancel_url: window.location.origin + '/payment-cancel',
-        customer_email: formData.email,
-      };
-
-      // Simulate API response
       setTimeout(() => {
-        // In production, this would be the actual payment URL from NOWPayments
         const mockPaymentUrl = `https://nowpayments.io/payment/?iid=${orderIdGenerated}&amount=${ticketInfo.cryptoPrice}&currency=USD`;
         setPaymentUrl(mockPaymentUrl);
         setPaymentProcessing(false);
@@ -126,7 +112,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
     }
   };
 
-  // Generate realistic FIFA ticket with all correct information from form
+  // Generate realistic FIFA ticket
   const generateFIFATicket = () => {
     const orderIdGenerated = orderId || `FIFA2026-${Date.now().toString().slice(-8)}`;
     setOrderId(orderIdGenerated);
@@ -138,7 +124,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
     
     // Parse match information from ticket title
     const isMatch = ticketInfo.type === 'match';
-    const matchInfo = isMatch ? ticketInfo.title.split(' - ') : ['Package', ticketInfo.title];
     
     const ticketContent = `
 ╔══════════════════════════════════════════════════════════════════════════════╗
