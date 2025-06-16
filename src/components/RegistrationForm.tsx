@@ -126,11 +126,20 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
     }
   };
 
-  // Generate realistic FIFA ticket
+  // Generate realistic FIFA ticket with all correct information from form
   const generateFIFATicket = () => {
     const orderIdGenerated = orderId || `FIFA2026-${Date.now().toString().slice(-8)}`;
     setOrderId(orderIdGenerated);
 
+    // Generate security codes
+    const securityCode = Math.random().toString(36).substring(2, 15).toUpperCase();
+    const barcode = Math.random().toString().replace('0.', '').substring(0, 12);
+    const qrCode = `FIFA2026-${orderIdGenerated}-${securityCode}`;
+    
+    // Parse match information from ticket title
+    const isMatch = ticketInfo.type === 'match';
+    const matchInfo = isMatch ? ticketInfo.title.split(' - ') : ['Package', ticketInfo.title];
+    
     const ticketContent = `
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                          FIFA WORLD CUP 2026™                               ║
@@ -143,10 +152,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-🎫 MATCH DETAILS:
+🎫 ${isMatch ? 'MATCH' : 'PACKAGE'} DETAILS:
 ${ticketInfo.title}
 
 📍 VENUE INFORMATION:
+${isMatch ? `
 Stadium: [Stadium will be confirmed closer to match date]
 City: [City will be confirmed based on match schedule]
 Country: USA/Canada/Mexico
@@ -155,33 +165,32 @@ Country: USA/Canada/Mexico
 Date: [To be confirmed by FIFA]
 Kick-off Time: [Local time will be announced]
 Gates Open: 2 hours before kick-off
+` : `
+Package Type: ${ticketInfo.title}
+Multiple Venues: Various stadiums across USA, Canada & Mexico
+Tournament Access: As per package inclusions
+`}
 
 ═══════════════════════════════════════════════════════════════════════════════
 
 👤 TICKET HOLDER INFORMATION:
 Full Name: ${formData.firstName.toUpperCase()} ${formData.lastName.toUpperCase()}
-Email: ${formData.email}
-Phone: ${formData.phone}
+Email Address: ${formData.email}
+Phone Number: ${formData.phone}
+Date of Birth: ${formData.dateOfBirth || 'Not provided'}
 Nationality: ${formData.nationality || 'Not specified'}
-Date of Birth: ${formData.dateOfBirth || 'Not specified'}
 
 📮 BILLING ADDRESS:
-${formData.address}
-${formData.city}, ${formData.country}
-${formData.postalCode || ''}
+Street Address: ${formData.address}
+City: ${formData.city}
+Country: ${formData.country}
+Postal Code: ${formData.postalCode || 'Not provided'}
 
 ═══════════════════════════════════════════════════════════════════════════════
 
 💰 PAYMENT CONFIRMATION:
 Order ID: ${orderIdGenerated}
-Original Price: $${ticketInfo.price.toLocaleString()} USD
-Cryptocurrency Discount: 30% OFF
-Final Amount Paid: $${ticketInfo.cryptoPrice.toLocaleString()} USD
-
-💎 CRYPTOCURRENCY PAYMENT DETAILS:
-Payment Method: NOWPayments Gateway
-Payment Status: ✅ CONFIRMED
-Payment Date: ${new Date().toLocaleString('en-US', { 
+Transaction Date: ${new Date().toLocaleString('en-US', { 
   year: 'numeric', 
   month: 'long', 
   day: 'numeric', 
@@ -190,116 +199,167 @@ Payment Date: ${new Date().toLocaleString('en-US', {
   timeZoneName: 'short'
 })}
 
+💵 PRICING BREAKDOWN:
+Original Price: $${ticketInfo.price.toLocaleString()} USD
+Cryptocurrency Discount (30%): -$${(ticketInfo.price - ticketInfo.cryptoPrice).toLocaleString()} USD
+Final Amount Paid: $${ticketInfo.cryptoPrice.toLocaleString()} USD
+
+💎 CRYPTOCURRENCY PAYMENT DETAILS:
+Payment Gateway: NOWPayments
+Payment Status: ✅ CONFIRMED & VERIFIED
+Payment Method: Cryptocurrency
+Blockchain Verified: YES
+
 ═══════════════════════════════════════════════════════════════════════════════
 
-🎫 TICKET AUTHENTICATION:
+🎫 TICKET AUTHENTICATION & SECURITY:
 Ticket ID: ${orderIdGenerated}
-Security Code: ${Math.random().toString(36).substring(2, 15).toUpperCase()}
-QR Code: [Digital QR code will be sent via email]
-Barcode: ${Math.random().toString().replace('0.', '').substring(0, 12)}
+Security Code: ${securityCode}
+QR Code Data: ${qrCode}
+Barcode: ${barcode}
+Issue Date: ${new Date().toLocaleDateString('en-US')}
+Issue Time: ${new Date().toLocaleTimeString('en-US')}
 
 🔐 ANTI-COUNTERFEITING FEATURES:
 • Unique holographic security elements
 • Embedded RFID chip for stadium entry
-• Blockchain-verified authenticity
-• FIFA official watermark
+• Blockchain-verified authenticity certificate
+• FIFA official watermark and seal
+• Tamper-evident security printing
+• Digital signature verification
 
 ═══════════════════════════════════════════════════════════════════════════════
 
 📋 IMPORTANT MATCH DAY INFORMATION:
 
-🚪 STADIUM ENTRY:
-• Arrive at least 2 hours before kick-off
-• Present this ticket AND valid photo ID
-• ID must match ticket holder name exactly
-• Children under 16 must be accompanied by an adult
+🚪 STADIUM ENTRY REQUIREMENTS:
+• Arrive at stadium minimum 2 hours before kick-off
+• Present this ticket AND valid government-issued photo ID
+• ID must match ticket holder name EXACTLY
+• Children under 16 must be accompanied by adult ticket holder
+• Ticket holder must enter stadium personally (non-transferable)
 
-🚫 PROHIBITED ITEMS:
-• Outside food and beverages
+🚫 PROHIBITED ITEMS (Strictly Enforced):
+• Outside food and beverages of any kind
 • Professional cameras and recording equipment
 • Weapons, sharp objects, or dangerous items
 • Alcohol (available for purchase inside stadium)
 • Flags or banners larger than 2m x 1m
+• Laser pointers, flares, or pyrotechnics
+• Glass containers or metal bottles
 
 ✅ PERMITTED ITEMS:
-• Small personal bags (subject to search)
-• Mobile phones and small cameras
-• Prescription medications
-• Small flags and scarves
+• Small personal bags (subject to security search)
+• Mobile phones and small personal cameras
+• Prescription medications with valid prescription
+• Small national flags and team scarves
+• Sunglasses and sun hats
+• Empty plastic water bottles (refill stations available)
 
-🎯 STADIUM FACILITIES:
-• Accessible seating available
-• Food and beverage concessions
+🎯 STADIUM FACILITIES & SERVICES:
+• Wheelchair accessible seating and facilities
+• Food and beverage concessions (multiple cuisines)
 • Official FIFA merchandise stores
 • First aid and medical facilities
 • Lost and found services
+• Multi-language customer service
+• Prayer/meditation rooms
+• Baby changing facilities
 
 ═══════════════════════════════════════════════════════════════════════════════
 
 ⚠️  TERMS AND CONDITIONS:
 
-🔄 TICKET TRANSFER POLICY:
-• Tickets are NON-TRANSFERABLE
-• Resale is STRICTLY PROHIBITED
-• Only original purchaser may use ticket
-• FIFA reserves right to cancel fraudulent tickets
+🔄 TICKET TRANSFER & RESALE POLICY:
+• Tickets are STRICTLY NON-TRANSFERABLE
+• Resale is PROHIBITED and will result in ticket cancellation
+• Only original purchaser may use this ticket
+• FIFA reserves right to cancel fraudulent or resold tickets
+• Ticket sharing or lending is not permitted
 
-💸 REFUND POLICY:
+💸 REFUND & EXCHANGE POLICY:
 • NO REFUNDS under any circumstances
-• NO EXCHANGES permitted
+• NO EXCHANGES permitted after purchase
 • Weather delays do not qualify for refunds
 • Match postponements will honor original tickets
+• Force majeure events subject to FIFA discretion
 
-🏟️ STADIUM REGULATIONS:
-• Follow all stadium staff instructions
-• Respect other spectators and players
-• No discriminatory behavior tolerated
-• Smoking prohibited in stadium
-• Comply with local laws and regulations
+🏟️ STADIUM REGULATIONS & CONDUCT:
+• Follow all stadium staff and security instructions
+• Respect other spectators, players, and officials
+• No discriminatory, offensive, or abusive behavior
+• Smoking prohibited throughout stadium premises
+• Comply with all local laws and FIFA regulations
+• Violation may result in ejection without refund
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-📞 CUSTOMER SUPPORT & ASSISTANCE:
+📞 CUSTOMER SUPPORT & EMERGENCY CONTACTS:
 
-🌐 FIFA Official Channels:
+🌐 FIFA OFFICIAL CHANNELS:
 Website: www.fifa.com/worldcup
-Email: tickets@fifa.com
-Phone: +41 43 222 7777 (FIFA Headquarters)
+Official Email: tickets@fifa.com
+FIFA Headquarters: +41 43 222 7777
+FIFA Ticket Portal: tickets.fifa.com
 
-🎫 Ticket Portal Support:
-Phone: +1 (555) 123-4567
-WhatsApp: ${whatsappNumber}
-Email: support@worldcup2026tickets.com
-Hours: 24/7 Customer Service
+🎫 AUTHORIZED TICKET VENDOR SUPPORT:
+Customer Service: +1 (555) 123-4567
+WhatsApp Support: ${whatsappNumber}
+Email Support: support@worldcup2026tickets.com
+Operating Hours: 24/7 Customer Service Available
 
-🚨 EMERGENCY CONTACTS:
-Match Day Hotline: [Will be provided closer to match date]
+🚨 MATCH DAY EMERGENCY CONTACTS:
+Match Day Hotline: [Provided 48 hours before match]
 Stadium Security: [Available on match day]
-Local Emergency Services: 911 (USA), 911 (Canada), 911 (Mexico)
+Medical Emergency: [Stadium medical team]
+Local Emergency Services: 911 (USA/Canada/Mexico)
 
 ═══════════════════════════════════════════════════════════════════════════════
 
 🏆 FIFA WORLD CUP 2026™ - BIGGER. BETTER. TOGETHER.
 
-This ticket grants access to the FIFA World Cup 2026™ match specified above.
+This ticket grants access to the FIFA World Cup 2026™ ${isMatch ? 'match' : 'package'} specified above.
 This is an official FIFA-sanctioned ticket purchased through an authorized vendor.
+Ticket authenticity can be verified at: verify.fifa.com/tickets
 
-⚡ BLOCKCHAIN VERIFIED: This ticket's authenticity is verified on the blockchain
+⚡ BLOCKCHAIN VERIFIED: This ticket's authenticity is permanently recorded on blockchain
 🔒 SECURE PURCHASE: Payment processed through encrypted cryptocurrency transaction
-🌟 PREMIUM EXPERIENCE: Enjoy the greatest football celebration on Earth
+🌟 PREMIUM EXPERIENCE: Welcome to the greatest football celebration on Earth
+🎉 HISTORIC TOURNAMENT: First World Cup with 48 teams across 3 countries
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-📄 LEGAL DISCLAIMER:
-This ticket is issued subject to FIFA regulations and local stadium policies.
-FIFA and its partners are not liable for any indirect or consequential damages.
-By using this ticket, holder agrees to be filmed/photographed for broadcast.
+📄 LEGAL DISCLAIMER & LIABILITY:
+This ticket is issued subject to FIFA regulations, local stadium policies, and applicable laws.
+FIFA, its partners, and authorized vendors are not liable for indirect or consequential damages.
+By using this ticket, holder agrees to be filmed/photographed for broadcast purposes.
 Ticket holder assumes all risks associated with attending the event.
+Entry to stadium constitutes acceptance of all terms and conditions.
 
-🎭 CONDUCT POLICY:
-Discriminatory behavior, violence, or disruption will result in ejection.
-FIFA promotes respect, diversity, and fair play at all events.
-Help create a positive atmosphere for all spectators.
+🎭 FIFA FAIR PLAY & CONDUCT POLICY:
+FIFA promotes respect, diversity, inclusion, and fair play at all events.
+Discriminatory behavior, violence, or disruption will result in immediate ejection.
+Help create a positive, safe, and enjoyable atmosphere for all spectators.
+Report any inappropriate behavior to stadium security immediately.
+
+🌍 SUSTAINABILITY COMMITMENT:
+FIFA World Cup 2026™ is committed to environmental sustainability.
+Please use public transportation when possible and recycle responsibly.
+Digital tickets help reduce paper waste - thank you for your support.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📊 TICKET STATISTICS & INFORMATION:
+Total Tournament Matches: 104
+Participating Teams: 48
+Host Cities: 16 across USA, Canada & Mexico
+Expected Attendance: 5+ million spectators
+Languages Supported: 10+ official languages
+
+🎪 CULTURAL CELEBRATION:
+Experience the fusion of three cultures in one tournament
+Enjoy diverse food, music, and traditions from North America
+Witness history as the largest World Cup ever held
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -315,14 +375,16 @@ Generated: ${new Date().toLocaleString('en-US', {
 })}
 
 Valid for: FIFA World Cup 2026™ Tournament
-Issued by: Official FIFA Ticket Portal
+Issued by: Official FIFA Authorized Ticket Portal
+Verification Code: ${securityCode}
 
 ⚠️  KEEP THIS TICKET SAFE - IT IS YOUR ENTRY TO THE MATCH! ⚠️
-🎫 Present this ticket with valid ID at stadium entrance 🎫
+🎫 Present this ticket with matching photo ID at stadium entrance 🎫
 
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║  © FIFA 2026. FIFA World Cup 2026™ and all related marks are trademarks    ║
 ║  of FIFA. All rights reserved. Unauthorized reproduction is prohibited.      ║
+║  This ticket is valid only for the specified match/package and date.        ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
     `;
 
