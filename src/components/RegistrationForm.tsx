@@ -84,87 +84,88 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
 
   const whatsappNumber = '+34632800363';
   
-  // 🔑 Your NOWPayments API Key
+  // NOWPayments API Key
   const NOWPAYMENTS_API_KEY = 'W86THVT-1PCM8V2-MGDQTN0-B3WPJA2';
 
-  // 💳 Create crypto payment via NOWPayments API
+  // Create crypto payment via NOWPayments API
   const createCryptoPayment = async () => {
-  try {
-    setPaymentProcessing(true);
-    const orderIdGenerated = `FIFA2026-${Date.now().toString().slice(-8)}`;
-    setOrderId(orderIdGenerated);
+    try {
+      setPaymentProcessing(true);
+      const orderIdGenerated = `FIFA2026-${Date.now().toString().slice(-8)}`;
+      setOrderId(orderIdGenerated);
 
-    const paymentData = {
-      price_amount: ticketInfo.cryptoPrice,
-      price_currency: 'USD',
-      pay_currency: '', // user selects crypto
-      order_id: orderIdGenerated,
-      order_description: `FIFA World Cup 2026 - ${ticketInfo.title}`,
-      success_url: window.location.origin + '?payment=success',
-      cancel_url: window.location.origin + '?payment=cancel',
-      customer_email: formData.email,
-      is_fixed_rate: false,
-      is_fee_paid_by_user: true
-    };
+      const paymentData = {
+        price_amount: ticketInfo.cryptoPrice,
+        price_currency: 'USD',
+        pay_currency: '', // user selects crypto
+        order_id: orderIdGenerated,
+        order_description: `FIFA World Cup 2026 - ${ticketInfo.title}`,
+        success_url: window.location.origin + '?payment=success',
+        cancel_url: window.location.origin + '?payment=cancel',
+        customer_email: formData.email,
+        is_fixed_rate: false,
+        is_fee_paid_by_user: true
+      };
 
-    console.log('🚀 Creating payment with data:', paymentData);
+      console.log('Creating payment with data:', paymentData);
 
-    const response = await fetch('https://api.nowpayments.io/v1/payment', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': NOWPAYMENTS_API_KEY
-      },
-      body: JSON.stringify(paymentData)
-    });
+      const response = await fetch('https://api.nowpayments.io/v1/payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': NOWPAYMENTS_API_KEY
+        },
+        body: JSON.stringify(paymentData)
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-    }
-
-    const result = await response.json();
-    console.log('✅ Payment created successfully:', result);
-
-    if (result.payment_id) {
-      setPaymentId(result.payment_id);
-      const invoiceUrl = result.invoice_url || `https://nowpayments.io/payment/?iid=${result.payment_id}`;
-      setPaymentUrl(invoiceUrl);
-
-      const paymentWindow = window.open(
-        invoiceUrl,
-        '_blank',
-        'width=800,height=700,scrollbars=yes,resizable=yes'
-      );
-
-      if (paymentWindow) {
-        checkPaymentStatus(result.payment_id);
-        alert('✅ Payment page created successfully! Please complete the payment.');
-      } else {
-        alert('⚠️ Pop-up blocked. Please allow pop-ups and try again.');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
-    } else {
-      throw new Error('No payment_id returned');
-    }
 
-  } catch (error) {
-    console.error('❌ Error creating payment:', error);
-    alert(
-      `⚠️ Error creating payment page.\n\n` +
-      `Order ID: ${orderId}\n` +
-      `Amount: $${ticketInfo.cryptoPrice}\n\n` +
-      `Please contact us via WhatsApp: ${whatsappNumber}\n` +
-      `or send an email with your order ID.`
-    );
-    setCurrentStep(5);
-  } finally {
-    setPaymentProcessing(false);
-  }
-};
-  // 🔍 Check payment status
+      const result = await response.json();
+      console.log('Payment created successfully:', result);
+
+      if (result.payment_id) {
+        setPaymentId(result.payment_id);
+        const invoiceUrl = result.invoice_url || `https://nowpayments.io/payment/?iid=${result.payment_id}`;
+        setPaymentUrl(invoiceUrl);
+
+        const paymentWindow = window.open(
+          invoiceUrl,
+          '_blank',
+          'width=800,height=700,scrollbars=yes,resizable=yes'
+        );
+
+        if (paymentWindow) {
+          checkPaymentStatus(result.payment_id);
+          alert('Payment page created successfully! Please complete the payment.');
+        } else {
+          alert('Pop-up blocked. Please allow pop-ups and try again.');
+        }
+      } else {
+        throw new Error('No payment_id returned');
+      }
+
+    } catch (error) {
+      console.error('Error creating payment:', error);
+      alert(
+        `Error creating payment page.\n\n` +
+        `Order ID: ${orderId}\n` +
+        `Amount: $${ticketInfo.cryptoPrice}\n\n` +
+        `Please contact us via WhatsApp: ${whatsappNumber}\n` +
+        `or send an email with your order ID.`
+      );
+      setCurrentStep(5);
+    } finally {
+      setPaymentProcessing(false);
+    }
+  };
+
+  // Check payment status
   const checkPaymentStatus = async (paymentIdToCheck: string) => {
     try {
-      console.log('🔍 Checking payment status for:', paymentIdToCheck);
+      console.log('Checking payment status for:', paymentIdToCheck);
       
       const response = await fetch(`https://api.nowpayments.io/v1/payment/${paymentIdToCheck}`, {
         method: 'GET',
@@ -175,39 +176,39 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
 
       if (response.ok) {
         const result = await response.json();
-        console.log('📊 Payment status:', result.payment_status);
+        console.log('Payment status:', result.payment_status);
 
-        // ✅ Payment completed
+        // Payment completed
         if (['finished', 'confirmed'].includes(result.payment_status)) {
           setPaymentConfirmed(true);
           setCurrentStep(5);
-          alert('🎉 Payment confirmed successfully!');
+          alert('Payment confirmed successfully!');
           return;
         }
 
-        // ⏳ Payment pending
+        // Payment pending
         if (['waiting', 'confirming', 'sending'].includes(result.payment_status)) {
-          console.log('⏳ Payment still processing, checking again in 10 seconds...');
+          console.log('Payment still processing, checking again in 10 seconds...');
           setTimeout(() => checkPaymentStatus(paymentIdToCheck), 10000);
         }
 
-        // ❌ Payment failed or expired
+        // Payment failed or expired
         if (['failed', 'expired'].includes(result.payment_status)) {
-          alert('❌ Payment failed or expired. Please try again.');
+          alert('Payment failed or expired. Please try again.');
         }
       } else {
-        console.error('❌ Error checking payment status:', response.status);
+        console.error('Error checking payment status:', response.status);
         // Retry after 15 seconds on error
         setTimeout(() => checkPaymentStatus(paymentIdToCheck), 15000);
       }
     } catch (error) {
-      console.error('❌ Error checking payment status:', error);
+      console.error('Error checking payment status:', error);
       // Retry after 15 seconds
       setTimeout(() => checkPaymentStatus(paymentIdToCheck), 15000);
     }
   };
 
-  // 📄 Generate FIFA ticket PDF
+  // Generate FIFA ticket PDF
   const generateFIFATicketPDF = () => {
     const orderIdGenerated = orderId || `FIFA2026-${Date.now().toString().slice(-8)}`;
     const securityCode = Math.random().toString(36).substring(2, 15).toUpperCase();
@@ -215,10 +216,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
 
     const pdf = new jsPDF('p', 'mm', 'a4');
     
-    // 🎨 Font setup
+    // Font setup
     pdf.setFont('helvetica');
 
-    // 📋 First page - Ticket information
+    // First page - Ticket information
     // FIFA header
     pdf.setFillColor(0, 51, 153); // FIFA blue
     pdf.rect(0, 0, 210, 30, 'F');
@@ -306,7 +307,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
     pdf.text(`Issue Date: ${new Date().toLocaleDateString()}`, 20, yPos);
     pdf.text(`Issue Time: ${new Date().toLocaleTimeString()}`, 120, yPos);
 
-    // 📄 Second page - Terms and conditions
+    // Second page - Terms and conditions
     pdf.addPage();
     
     // Second page header
