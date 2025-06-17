@@ -86,6 +86,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
   
   // NOWPayments API Key
   const NOWPAYMENTS_API_KEY = 'W86THVT-1PCM8V2-MGDQTN0-B3WPJA2';
+  
+  // Webhook URL for payment notifications
+  const WEBHOOK_URL = 'https://www.tixcup.com/api/nowpayments-webhook';
 
   // Create crypto payment via NOWPayments API
   const createCryptoPayment = async () => {
@@ -102,6 +105,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
         order_description: `FIFA World Cup 2026 - ${ticketInfo.title}`,
         success_url: window.location.origin + '?payment=success',
         cancel_url: window.location.origin + '?payment=cancel',
+        ipn_callback_url: WEBHOOK_URL, // Added webhook URL
         customer_email: formData.email,
         is_fixed_rate: false,
         is_fee_paid_by_user: true
@@ -797,7 +801,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                         <li>A new payment page will open in a separate window</li>
                         <li>Choose your preferred cryptocurrency</li>
                         <li>Complete payment using your wallet</li>
-                        <li>Payment confirmation is automatic</li>
+                        <li>Payment confirmation is automatic via webhook</li>
                       </ul>
                     </div>
                   </div>
