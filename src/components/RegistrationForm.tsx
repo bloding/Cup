@@ -89,92 +89,78 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
 
   // 💳 Create crypto payment via NOWPayments API
   const createCryptoPayment = async () => {
-    try {
-      setPaymentProcessing(true);
-      const orderIdGenerated = `FIFA2026-${Date.now().toString().slice(-8)}`;
-      setOrderId(orderIdGenerated);
+  try {
+    setPaymentProcessing(true);
+    const orderIdGenerated = `FIFA2026-${Date.now().toString().slice(-8)}`;
+    setOrderId(orderIdGenerated);
 
-      // 📋 Payment data
-      const paymentData = {
-  price_amount: ticketInfo.cryptoPrice,
-  price_currency: 'USD',
-  pay_currency: '', // let user select crypto on the invoice page
-  order_id: orderIdGenerated,
-  order_description: `FIFA World Cup 2026 - ${ticketInfo.title}`,
-  success_url: window.location.origin + '?payment=success',
-  cancel_url: window.location.origin + '?payment=cancel',
-  customer_email: formData.email,
-  case: 'success', // 💡 TEST MODE → always succeeds
-  is_fixed_rate: false,
-  is_fee_paid_by_user: true
-};
+    const paymentData = {
+      price_amount: ticketInfo.cryptoPrice,
+      price_currency: 'USD',
+      pay_currency: '', // user selects crypto
+      order_id: orderIdGenerated,
+      order_description: `FIFA World Cup 2026 - ${ticketInfo.title}`,
+      success_url: window.location.origin + '?payment=success',
+      cancel_url: window.location.origin + '?payment=cancel',
+      customer_email: formData.email,
+      is_fixed_rate: false,
+      is_fee_paid_by_user: true
+    };
 
-      console.log('🚀 Creating payment with data:', paymentData);
+    console.log('🚀 Creating payment with data:', paymentData);
 
-      // 🌐 Send payment creation request
-      const response = await fetch('https://api.nowpayments.io/v1/payment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': NOWPAYMENTS_API_KEY
-        },
-        body: JSON.stringify(paymentData)
-      });
+    const response = await fetch('https://api.nowpayments.io/v1/payment', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': NOWPAYMENTS_API_KEY
+      },
+      body: JSON.stringify(paymentData)
+    });
 
-      console.log('📡 Response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API Error:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ Payment created successfully:', result);
-
-      if (result.payment_id) {
-        setPaymentId(result.payment_id);
-        
-        // 🔗 Payment page URL
-        const invoiceUrl = result.invoice_url || `https://nowpayments.io/payment/?iid=${result.payment_id}`;
-        setPaymentUrl(invoiceUrl);
-
-        // 🪟 Open payment page in new window
-        const paymentWindow = window.open(
-          invoiceUrl,
-          '_blank',
-          'width=800,height=700,scrollbars=yes,resizable=yes'
-        );
-
-        if (paymentWindow) {
-          // ✅ Start monitoring payment status
-          checkPaymentStatus(result.payment_id);
-          alert('✅ Payment page created successfully! You can now pay using your crypto wallet.');
-        } else {
-          alert('⚠️ Pop-up blocked. Please allow pop-ups and try again.');
-        }
-      } else {
-        throw new Error('Failed to create payment - no payment_id returned');
-      }
-    } catch (error) {
-      console.error('❌ Error creating NOWPayments payment:', error);
-      
-      // 📞 In case of error, show contact information
-      alert(
-        `⚠️ Error creating payment page.\n\n` +
-        `Order ID: ${orderId}\n` +
-        `Amount: $${ticketInfo.cryptoPrice}\n\n` +
-        `Please contact us via WhatsApp: ${whatsappNumber}\n` +
-        `or send an email with your order ID.`
-      );
-      
-      // Go to confirmation page
-      setCurrentStep(5);
-    } finally {
-      setPaymentProcessing(false);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
     }
-  };
 
+    const result = await response.json();
+    console.log('✅ Payment created successfully:', result);
+
+    if (result.payment_id) {
+      setPaymentId(result.payment_id);
+      const invoiceUrl = result.invoice_url || `https://nowpayments.io/payment/?iid=${result.payment_id}`;
+      setPaymentUrl(invoiceUrl);
+
+      const paymentWindow = window.open(
+        invoiceUrl,
+        '_blank',
+        'width=800,height=700,scrollbars=yes,resizable=yes'
+      );
+
+      if (paymentWindow) {
+        checkPaymentStatus(result.payment_id);
+        alert('✅ Payment page created successfully! Please complete the payment.');
+      } else {
+        alert('⚠️ Pop-up blocked. Please allow pop-ups and try again.');
+      }
+    } else {
+      throw new Error('No payment_id returned');
+    }
+
+  } catch (error) {
+    console.error('❌ Error creating payment:', error);
+    alert(
+      `⚠️ Error creating payment page.\n\n` +
+      `Order ID: ${orderId}\n` +
+      `Amount: $${ticketInfo.cryptoPrice}\n\n` +
+      `Please contact us via WhatsApp: ${whatsappNumber}\n` +
+      `or send an email with your order ID.`
+    );
+    setCurrentStep(5);
+  } finally {
+    setPaymentProcessing(false);
+  }
+};
   // 🔍 Check payment status
   const checkPaymentStatus = async (paymentIdToCheck: string) => {
     try {
