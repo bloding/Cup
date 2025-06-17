@@ -84,24 +84,24 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
 
   const whatsappNumber = '+34632800363';
   
-  // 🔑 مفتاح API الخاص بك من NOWPayments
+  // 🔑 Your NOWPayments API Key
   const NOWPAYMENTS_API_KEY = '53564b07-5501-446c-a623-bbf5cfc439b8';
 
-  // 💳 إنشاء دفعة عبر NOWPayments API
+  // 💳 Create crypto payment via NOWPayments API
   const createCryptoPayment = async () => {
     try {
       setPaymentProcessing(true);
       const orderIdGenerated = `FIFA2026-${Date.now().toString().slice(-8)}`;
       setOrderId(orderIdGenerated);
 
-      // 📋 بيانات الدفعة
+      // 📋 Payment data
       const paymentData = {
         price_amount: ticketInfo.cryptoPrice,
         price_currency: 'USD',
-        pay_currency: '', // سيتم اختيار العملة المشفرة من قبل المستخدم
+        pay_currency: '', // User will select crypto currency
         order_id: orderIdGenerated,
         order_description: `FIFA World Cup 2026 - ${ticketInfo.title}`,
-        ipn_callback_url: '', // يمكنك إضافة رابط webhook هنا
+        ipn_callback_url: '', // You can add webhook URL here
         success_url: window.location.origin + '?payment=success',
         cancel_url: window.location.origin + '?payment=cancel',
         customer_email: formData.email,
@@ -111,7 +111,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
 
       console.log('🚀 Creating payment with data:', paymentData);
 
-      // 🌐 إرسال طلب إنشاء الدفعة
+      // 🌐 Send payment creation request
       const response = await fetch('https://api.nowpayments.io/v1/payment', {
         method: 'POST',
         headers: {
@@ -135,11 +135,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
       if (result.payment_id) {
         setPaymentId(result.payment_id);
         
-        // 🔗 رابط صفحة الدفع
+        // 🔗 Payment page URL
         const invoiceUrl = result.invoice_url || `https://nowpayments.io/payment/?iid=${result.payment_id}`;
         setPaymentUrl(invoiceUrl);
 
-        // 🪟 فتح صفحة الدفع في نافذة جديدة
+        // 🪟 Open payment page in new window
         const paymentWindow = window.open(
           invoiceUrl,
           '_blank',
@@ -147,35 +147,35 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
         );
 
         if (paymentWindow) {
-          // ✅ بدء مراقبة حالة الدفع
+          // ✅ Start monitoring payment status
           checkPaymentStatus(result.payment_id);
-          alert('✅ تم إنشاء صفحة الدفع بنجاح! يمكنك الآن الدفع باستخدام محفظتك المشفرة.');
+          alert('✅ Payment page created successfully! You can now pay using your crypto wallet.');
         } else {
-          alert('⚠️ تم حظر النافذة المنبثقة. يرجى السماح بالنوافذ المنبثقة والمحاولة مرة أخرى.');
+          alert('⚠️ Pop-up blocked. Please allow pop-ups and try again.');
         }
       } else {
-        throw new Error('فشل في إنشاء الدفعة - لم يتم إرجاع payment_id');
+        throw new Error('Failed to create payment - no payment_id returned');
       }
     } catch (error) {
-      console.error('❌ خطأ في إنشاء دفعة NOWPayments:', error);
+      console.error('❌ Error creating NOWPayments payment:', error);
       
-      // 📞 في حالة الخطأ، عرض معلومات الاتصال
+      // 📞 In case of error, show contact information
       alert(
-        `⚠️ حدث خطأ في إنشاء صفحة الدفع.\n\n` +
-        `رقم الطلب: ${orderId}\n` +
-        `المبلغ: $${ticketInfo.cryptoPrice}\n\n` +
-        `يرجى التواصل معنا عبر WhatsApp: ${whatsappNumber}\n` +
-        `أو إرسال إيميل مع رقم الطلب.`
+        `⚠️ Error creating payment page.\n\n` +
+        `Order ID: ${orderId}\n` +
+        `Amount: $${ticketInfo.cryptoPrice}\n\n` +
+        `Please contact us via WhatsApp: ${whatsappNumber}\n` +
+        `or send an email with your order ID.`
       );
       
-      // الانتقال إلى صفحة التأكيد
+      // Go to confirmation page
       setCurrentStep(5);
     } finally {
       setPaymentProcessing(false);
     }
   };
 
-  // 🔍 التحقق من حالة الدفع
+  // 🔍 Check payment status
   const checkPaymentStatus = async (paymentIdToCheck: string) => {
     try {
       console.log('🔍 Checking payment status for:', paymentIdToCheck);
@@ -191,37 +191,37 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
         const result = await response.json();
         console.log('📊 Payment status:', result.payment_status);
 
-        // ✅ الدفع مكتمل
+        // ✅ Payment completed
         if (['finished', 'confirmed'].includes(result.payment_status)) {
           setPaymentConfirmed(true);
           setCurrentStep(5);
-          alert('🎉 تم تأكيد الدفع بنجاح!');
+          alert('🎉 Payment confirmed successfully!');
           return;
         }
 
-        // ⏳ الدفع في الانتظار
+        // ⏳ Payment pending
         if (['waiting', 'confirming', 'sending'].includes(result.payment_status)) {
           console.log('⏳ Payment still processing, checking again in 10 seconds...');
           setTimeout(() => checkPaymentStatus(paymentIdToCheck), 10000);
         }
 
-        // ❌ الدفع فاشل أو منتهي الصلاحية
+        // ❌ Payment failed or expired
         if (['failed', 'expired'].includes(result.payment_status)) {
-          alert('❌ فشل الدفع أو انتهت صلاحيته. يرجى المحاولة مرة أخرى.');
+          alert('❌ Payment failed or expired. Please try again.');
         }
       } else {
         console.error('❌ Error checking payment status:', response.status);
-        // إعادة المحاولة بعد 15 ثانية في حالة الخطأ
+        // Retry after 15 seconds on error
         setTimeout(() => checkPaymentStatus(paymentIdToCheck), 15000);
       }
     } catch (error) {
-      console.error('❌ خطأ في التحقق من حالة الدفع:', error);
-      // إعادة المحاولة بعد 15 ثانية
+      console.error('❌ Error checking payment status:', error);
+      // Retry after 15 seconds
       setTimeout(() => checkPaymentStatus(paymentIdToCheck), 15000);
     }
   };
 
-  // 📄 إنشاء تذكرة PDF
+  // 📄 Generate FIFA ticket PDF
   const generateFIFATicketPDF = () => {
     const orderIdGenerated = orderId || `FIFA2026-${Date.now().toString().slice(-8)}`;
     const securityCode = Math.random().toString(36).substring(2, 15).toUpperCase();
@@ -229,12 +229,12 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
 
     const pdf = new jsPDF('p', 'mm', 'a4');
     
-    // 🎨 إعداد الخط
+    // 🎨 Font setup
     pdf.setFont('helvetica');
 
-    // 📋 الصفحة الأولى - معلومات التذكرة
-    // رأس FIFA
-    pdf.setFillColor(0, 51, 153); // أزرق FIFA
+    // 📋 First page - Ticket information
+    // FIFA header
+    pdf.setFillColor(0, 51, 153); // FIFA blue
     pdf.rect(0, 0, 210, 30, 'F');
     
     pdf.setTextColor(255, 255, 255);
@@ -243,7 +243,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
     pdf.setFontSize(12);
     pdf.text('OFFICIAL TICKET', 105, 22, { align: 'center' });
 
-    // معلومات التذكرة
+    // Ticket information
     pdf.setTextColor(0, 0, 0);
     pdf.setFontSize(16);
     pdf.text('TICKET INFORMATION', 20, 45);
@@ -264,7 +264,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
     pdf.text(`Transaction ID: ${paymentId || 'Processing'}`, 20, yPos);
     yPos += 15;
 
-    // معلومات حامل التذكرة
+    // Ticket holder information
     pdf.setFontSize(16);
     pdf.text('TICKET HOLDER INFORMATION', 20, yPos);
     yPos += 10;
@@ -286,7 +286,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
     }
     yPos += 10;
 
-    // عنوان الفوترة
+    // Billing address
     pdf.setFontSize(16);
     pdf.text('BILLING ADDRESS', 20, yPos);
     yPos += 10;
@@ -304,8 +304,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
     }
     yPos += 15;
 
-    // معلومات الأمان
-    pdf.setFillColor(255, 255, 0); // أصفر
+    // Security information
+    pdf.setFillColor(255, 255, 0); // Yellow
     pdf.rect(15, yPos - 5, 180, 25, 'F');
     
     pdf.setFontSize(14);
@@ -315,15 +315,15 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
     pdf.text(`QR Code: ${qrCode}`, 20, yPos + 18);
     yPos += 35;
 
-    // تاريخ الإصدار
+    // Issue date
     pdf.setFontSize(10);
     pdf.text(`Issue Date: ${new Date().toLocaleDateString()}`, 20, yPos);
     pdf.text(`Issue Time: ${new Date().toLocaleTimeString()}`, 120, yPos);
 
-    // 📄 الصفحة الثانية - الشروط والأحكام
+    // 📄 Second page - Terms and conditions
     pdf.addPage();
     
-    // رأس الصفحة الثانية
+    // Second page header
     pdf.setFillColor(0, 51, 153);
     pdf.rect(0, 0, 210, 25, 'F');
     
@@ -386,7 +386,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
       yPos += 6;
     });
 
-    // حفظ الملف
+    // Save file
     const fileName = `FIFA_WorldCup_2026_Ticket_${formData.firstName}_${formData.lastName}_${orderIdGenerated}.pdf`;
     pdf.save(fileName);
   };
@@ -403,52 +403,52 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
     switch (step) {
       case 1:
         if (!formData.firstName.trim()) {
-          alert('يرجى إدخال الاسم الأول');
+          alert('Please enter your first name');
           return false;
         }
         if (!formData.lastName.trim()) {
-          alert('يرجى إدخال اسم العائلة');
+          alert('Please enter your last name');
           return false;
         }
         if (!formData.email.trim()) {
-          alert('يرجى إدخال البريد الإلكتروني');
+          alert('Please enter your email address');
           return false;
         }
         if (!formData.confirmEmail.trim()) {
-          alert('يرجى تأكيد البريد الإلكتروني');
+          alert('Please confirm your email address');
           return false;
         }
         if (formData.email !== formData.confirmEmail) {
-          alert('البريد الإلكتروني غير متطابق');
+          alert('Email addresses do not match');
           return false;
         }
         if (!formData.phone.trim()) {
-          alert('يرجى إدخال رقم الهاتف');
+          alert('Please enter your phone number');
           return false;
         }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(formData.email)) {
-          alert('البريد الإلكتروني غير صحيح');
+          alert('Please enter a valid email address');
           return false;
         }
         return true;
       case 2:
         if (!formData.address.trim()) {
-          alert('يرجى إدخال العنوان');
+          alert('Please enter your address');
           return false;
         }
         if (!formData.city.trim()) {
-          alert('يرجى إدخال المدينة');
+          alert('Please enter your city');
           return false;
         }
         if (!formData.country.trim()) {
-          alert('يرجى اختيار البلد');
+          alert('Please select your country');
           return false;
         }
         return true;
       case 3:
         if (!formData.agreeTerms) {
-          alert('يرجى الموافقة على الشروط والأحكام');
+          alert('Please agree to the terms and conditions');
           return false;
         }
         return true;
@@ -476,7 +476,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
         <div className="flex justify-between items-center p-6 border-b bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-t-2xl">
           <div>
             <h2 className="text-2xl font-bold">
-              {currentStep === 5 ? '🎉 تم تأكيد الدفع!' : 'إكمال التسجيل'}
+              {currentStep === 5 ? '🎉 Payment Confirmed!' : 'Complete Registration'}
             </h2>
             <p className="text-blue-200 text-sm">{ticketInfo.title}</p>
           </div>
@@ -492,12 +492,12 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
         {currentStep < 5 && (
           <div className="px-6 py-4 bg-gray-50">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-600">الخطوة {currentStep} من 4</span>
+              <span className="text-sm font-medium text-gray-600">Step {currentStep} of 4</span>
               <span className="text-sm text-gray-500">
-                {currentStep === 1 && 'المعلومات الشخصية'}
-                {currentStep === 2 && 'تفاصيل العنوان'}
-                {currentStep === 3 && 'الشروط والأحكام'}
-                {currentStep === 4 && 'الدفع بالعملة المشفرة'}
+                {currentStep === 1 && 'Personal Information'}
+                {currentStep === 2 && 'Address Details'}
+                {currentStep === 3 && 'Terms & Conditions'}
+                {currentStep === 4 && 'Crypto Payment'}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -515,69 +515,69 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
             <div className="space-y-6">
               <div className="text-center mb-6">
                 <User className="h-12 w-12 text-blue-600 mx-auto mb-2" />
-                <h3 className="text-xl font-bold text-gray-800">المعلومات الشخصية</h3>
-                <p className="text-gray-600">يرجى تقديم بياناتك الشخصية</p>
+                <h3 className="text-xl font-bold text-gray-800">Personal Information</h3>
+                <p className="text-gray-600">Please provide your personal details</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">الاسم الأول *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
                   <input
                     type="text"
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="أدخل اسمك الأول"
+                    placeholder="Enter your first name"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">اسم العائلة *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
                   <input
                     type="text"
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="أدخل اسم العائلة"
+                    placeholder="Enter your last name"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">البريد الإلكتروني *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="أدخل بريدك الإلكتروني"
+                  placeholder="Enter your email address"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">تأكيد البريد الإلكتروني *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Email Address *</label>
                 <input
                   type="email"
                   name="confirmEmail"
                   value={formData.confirmEmail}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="أكد بريدك الإلكتروني"
+                  placeholder="Confirm your email address"
                   required
                 />
                 {formData.confirmEmail && formData.email !== formData.confirmEmail && (
-                  <p className="text-red-500 text-sm mt-1">البريد الإلكتروني غير متطابق</p>
+                  <p className="text-red-500 text-sm mt-1">Email addresses do not match</p>
                 )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">رقم الهاتف *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
                   <input
                     type="tel"
                     name="phone"
@@ -589,7 +589,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">تاريخ الميلاد</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
                   <input
                     type="date"
                     name="dateOfBirth"
@@ -601,14 +601,14 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">الجنسية</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nationality</label>
                 <select
                   name="nationality"
                   value={formData.nationality}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="">اختر الجنسية</option>
+                  <option value="">Select nationality</option>
                   {countries.map((country) => (
                     <option key={country} value={country}>{country}</option>
                   ))}
@@ -622,51 +622,51 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
             <div className="space-y-6">
               <div className="text-center mb-6">
                 <MapPin className="h-12 w-12 text-blue-600 mx-auto mb-2" />
-                <h3 className="text-xl font-bold text-gray-800">معلومات العنوان</h3>
-                <p className="text-gray-600">يرجى تقديم تفاصيل عنوانك</p>
+                <h3 className="text-xl font-bold text-gray-800">Address Information</h3>
+                <p className="text-gray-600">Please provide your address details</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">عنوان الشارع *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Street Address *</label>
                 <input
                   type="text"
                   name="address"
                   value={formData.address}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="أدخل عنوان الشارع"
+                  placeholder="Enter your street address"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">المدينة *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
                   <input
                     type="text"
                     name="city"
                     value={formData.city}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="أدخل المدينة"
+                    placeholder="Enter your city"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">الرمز البريدي</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
                   <input
                     type="text"
                     name="postalCode"
                     value={formData.postalCode}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="أدخل الرمز البريدي"
+                    placeholder="Enter your postal code"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">البلد *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Country *</label>
                 <select
                   name="country"
                   value={formData.country}
@@ -674,7 +674,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
-                  <option value="">اختر البلد</option>
+                  <option value="">Select country</option>
                   {countries.map((country) => (
                     <option key={country} value={country}>{country}</option>
                   ))}
@@ -688,24 +688,24 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
             <div className="space-y-6">
               <div className="text-center mb-6">
                 <Check className="h-12 w-12 text-blue-600 mx-auto mb-2" />
-                <h3 className="text-xl font-bold text-gray-800">الشروط والأحكام</h3>
-                <p className="text-gray-600">يرجى مراجعة وقبول شروطنا</p>
+                <h3 className="text-xl font-bold text-gray-800">Terms & Conditions</h3>
+                <p className="text-gray-600">Please review and accept our terms</p>
               </div>
 
               {/* Order Summary */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <h4 className="font-semibold text-gray-800 mb-2">ملخص الطلب</h4>
+                <h4 className="font-semibold text-gray-800 mb-2">Order Summary</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-700">{ticketInfo.title}</span>
                     <span className="font-bold text-gray-800">${ticketInfo.price.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center text-green-600">
-                    <span className="font-semibold">خصم العملة المشفرة (30%)</span>
+                    <span className="font-semibold">Crypto Payment Discount (30%)</span>
                     <span className="font-bold">-${(ticketInfo.price - ticketInfo.cryptoPrice).toLocaleString()}</span>
                   </div>
                   <div className="border-t pt-2 flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-800">المبلغ النهائي</span>
+                    <span className="text-lg font-bold text-gray-800">Final Amount</span>
                     <span className="text-xl font-bold text-green-600">${ticketInfo.cryptoPrice.toLocaleString()}</span>
                   </div>
                 </div>
@@ -723,7 +723,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                     required
                   />
                   <span className="text-sm text-gray-700">
-                    أوافق على <a href="#" className="text-blue-600 hover:underline">الشروط والأحكام</a> و <a href="#" className="text-blue-600 hover:underline">سياسة الخصوصية</a> *
+                    I agree to the <a href="#" className="text-blue-600 hover:underline">Terms & Conditions</a> and <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a> *
                   </span>
                 </label>
                 <label className="flex items-start space-x-3 cursor-pointer">
@@ -735,7 +735,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                     className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
                   <span className="text-sm text-gray-700">
-                    أرغب في تلقي رسائل تسويقية حول كأس العالم FIFA 2026
+                    I would like to receive marketing communications about FIFA World Cup 2026
                   </span>
                 </label>
               </div>
@@ -747,19 +747,19 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
             <div className="space-y-6">
               <div className="text-center mb-6">
                 <div className="text-4xl mb-2">💎</div>
-                <h3 className="text-xl font-bold text-gray-800">الدفع بالمحفظة المشفرة</h3>
-                <p className="text-gray-600">ادفع باستخدام MetaMask أو Trust Wallet أو أي محفظة مشفرة</p>
+                <h3 className="text-xl font-bold text-gray-800">Crypto Wallet Payment</h3>
+                <p className="text-gray-600">Pay using MetaMask, Trust Wallet, or any crypto wallet</p>
               </div>
 
               <div className="bg-blue-50 rounded-lg p-4 mb-6">
-                <h4 className="font-semibold text-blue-800 mb-3">معلومات العميل</h4>
+                <h4 className="font-semibold text-blue-800 mb-3">Customer Information</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                  <div><strong>الاسم:</strong> {formData.firstName} {formData.lastName}</div>
-                  <div><strong>البريد:</strong> {formData.email}</div>
-                  <div><strong>الهاتف:</strong> {formData.phone}</div>
-                  <div><strong>البلد:</strong> {formData.country}</div>
-                  {formData.nationality && <div><strong>الجنسية:</strong> {formData.nationality}</div>}
-                  {formData.dateOfBirth && <div><strong>تاريخ الميلاد:</strong> {formData.dateOfBirth}</div>}
+                  <div><strong>Name:</strong> {formData.firstName} {formData.lastName}</div>
+                  <div><strong>Email:</strong> {formData.email}</div>
+                  <div><strong>Phone:</strong> {formData.phone}</div>
+                  <div><strong>Country:</strong> {formData.country}</div>
+                  {formData.nationality && <div><strong>Nationality:</strong> {formData.nationality}</div>}
+                  {formData.dateOfBirth && <div><strong>Date of Birth:</strong> {formData.dateOfBirth}</div>}
                 </div>
               </div>
 
@@ -769,10 +769,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                     ${ticketInfo.cryptoPrice.toLocaleString()} USD
                   </div>
                   <div className="text-gray-600 mb-4">
-                    (تم تطبيق خصم 30% للدفع بالعملة المشفرة)
+                    (30% crypto payment discount applied)
                   </div>
                   <div className="text-sm text-green-700">
-                    يدعم أكثر من 100 عملة مشفرة: BTC, ETH, USDT, USDC, LTC, BCH وأكثر
+                    Supports 100+ cryptocurrencies: BTC, ETH, USDT, USDC, LTC, BCH and more
                   </div>
                 </div>
               </div>
@@ -790,27 +790,27 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                   {paymentProcessing ? (
                     <>
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                      <span>جاري إنشاء صفحة الدفع...</span>
+                      <span>Creating payment page...</span>
                     </>
                   ) : (
                     <>
                       <Wallet className="h-6 w-6" />
-                      <span>ادفع بالمحفظة المشفرة - ${ticketInfo.cryptoPrice.toLocaleString()}</span>
+                      <span>Pay with Crypto Wallet - ${ticketInfo.cryptoPrice.toLocaleString()}</span>
                     </>
                   )}
                 </button>
 
-                {/* معلومات إضافية */}
+                {/* Additional information */}
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <div className="flex items-start space-x-2">
                     <Info className="h-5 w-5 text-yellow-600 mt-0.5" />
                     <div className="text-sm text-yellow-800">
-                      <p className="font-semibold mb-1">معلومات مهمة:</p>
+                      <p className="font-semibold mb-1">Important Information:</p>
                       <ul className="list-disc list-inside space-y-1">
-                        <li>ستفتح صفحة دفع جديدة في نافذة منفصلة</li>
-                        <li>اختر العملة المشفرة المفضلة لديك</li>
-                        <li>أكمل الدفع باستخدام محفظتك</li>
-                        <li>سيتم تأكيد الدفع تلقائياً</li>
+                        <li>A new payment page will open in a separate window</li>
+                        <li>Choose your preferred cryptocurrency</li>
+                        <li>Complete payment using your wallet</li>
+                        <li>Payment confirmation is automatic</li>
                       </ul>
                     </div>
                   </div>
@@ -824,17 +824,17 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
             <div className="space-y-6 text-center">
               <div className="mb-6">
                 <div className="text-6xl mb-4">🎉</div>
-                <h3 className="text-2xl font-bold text-green-600 mb-2">تم تأكيد الدفع!</h3>
-                <p className="text-gray-600">تم تأمين تذاكر كأس العالم FIFA 2026 الخاصة بك</p>
+                <h3 className="text-2xl font-bold text-green-600 mb-2">Payment Confirmed!</h3>
+                <p className="text-gray-600">Your FIFA World Cup 2026 tickets have been secured</p>
               </div>
 
               <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                 <div className="text-sm text-gray-600 space-y-1">
-                  <div><strong>رقم الطلب:</strong> {orderId}</div>
-                  <div><strong>رقم المعاملة:</strong> {paymentId || 'قيد المعالجة'}</div>
-                  <div><strong>الاسم:</strong> {formData.firstName} {formData.lastName}</div>
-                  <div><strong>البريد الإلكتروني:</strong> {formData.email}</div>
-                  <div><strong>المبلغ المدفوع:</strong> ${ticketInfo.cryptoPrice.toLocaleString()} USD</div>
+                  <div><strong>Order ID:</strong> {orderId}</div>
+                  <div><strong>Transaction ID:</strong> {paymentId || 'Processing'}</div>
+                  <div><strong>Name:</strong> {formData.firstName} {formData.lastName}</div>
+                  <div><strong>Email:</strong> {formData.email}</div>
+                  <div><strong>Amount Paid:</strong> ${ticketInfo.cryptoPrice.toLocaleString()} USD</div>
                 </div>
               </div>
 
@@ -844,18 +844,18 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                 className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 flex items-center justify-center space-x-3"
               >
                 <Download className="h-6 w-6" />
-                <span>تحميل التذكرة الرسمية FIFA (PDF)</span>
+                <span>Download Official FIFA Ticket (PDF)</span>
                 <FileText className="h-6 w-6" />
               </button>
 
               <p className="text-gray-600 text-sm">
-                سيتم تحميل تذكرتك الرسمية كملف PDF. يرجى حفظها وإحضارها مع هوية صالحة في يوم المباراة.
+                Your official ticket will be downloaded as a PDF file. Please save it and bring it with valid ID on match day.
               </p>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-center justify-center space-x-2 text-blue-700">
                   <Phone className="h-5 w-5" />
-                  <span className="font-semibold">للدعم الفني: {whatsappNumber}</span>
+                  <span className="font-semibold">Support: {whatsappNumber}</span>
                 </div>
               </div>
 
@@ -864,7 +864,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                 onClick={onClose}
                 className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg"
               >
-                إغلاق
+                Close
               </button>
             </div>
           )}
@@ -878,7 +878,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                   onClick={handlePrevStep}
                   className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                 >
-                  السابق
+                  Previous
                 </button>
               )}
               {currentStep < 4 ? (
@@ -887,11 +887,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                   onClick={handleNextStep}
                   className="ml-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  التالي
+                  Next
                 </button>
               ) : (
                 <div className="ml-auto">
-                  <p className="text-sm text-gray-600">انقر على زر المحفظة المشفرة لإكمال عملية الشراء</p>
+                  <p className="text-sm text-gray-600">Click the crypto wallet button to complete your purchase</p>
                 </div>
               )}
             </div>
