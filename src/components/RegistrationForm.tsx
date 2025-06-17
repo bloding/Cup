@@ -84,10 +84,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
 
   const whatsappNumber = '+34632800363';
   
-  // NOWPayments API Key
+  // NOWPayments API Configuration
   const NOWPAYMENTS_API_KEY = 'W86THVT-1PCM8V2-MGDQTN0-B3WPJA2';
-  
-  // Webhook URL for payment notifications
+  const NOWPAYMENTS_API_URL = 'https://api.nowpayments.io/v1';
   const WEBHOOK_URL = 'https://www.tixcup.com/api/nowpayments-webhook';
 
   // Create crypto payment via NOWPayments API
@@ -97,23 +96,25 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
       const orderIdGenerated = `FIFA2026-${Date.now().toString().slice(-8)}`;
       setOrderId(orderIdGenerated);
 
+      console.log('🚀 Creating NOWPayments payment...');
+
       const paymentData = {
         price_amount: ticketInfo.cryptoPrice,
         price_currency: 'USD',
-        pay_currency: '', // user selects crypto
+        pay_currency: '', // Let user choose crypto
         order_id: orderIdGenerated,
         order_description: `FIFA World Cup 2026 - ${ticketInfo.title}`,
-        success_url: window.location.origin + '?payment=success',
-        cancel_url: window.location.origin + '?payment=cancel',
-        ipn_callback_url: WEBHOOK_URL, // Added webhook URL
+        success_url: `${window.location.origin}?payment=success&order=${orderIdGenerated}`,
+        cancel_url: `${window.location.origin}?payment=cancel&order=${orderIdGenerated}`,
+        ipn_callback_url: WEBHOOK_URL,
         customer_email: formData.email,
         is_fixed_rate: false,
         is_fee_paid_by_user: true
       };
 
-      console.log('Creating payment with data:', paymentData);
+      console.log('💳 Payment data:', paymentData);
 
-      const response = await fetch('https://api.nowpayments.io/v1/payment', {
+      const response = await fetch(`${NOWPAYMENTS_API_URL}/payment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -122,56 +123,67 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
         body: JSON.stringify(paymentData)
       });
 
+      console.log('📡 API Response status:', response.status);
+
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('❌ API Error:', errorText);
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('Payment created successfully:', result);
+      console.log('✅ Payment created successfully:', result);
 
       if (result.payment_id) {
         setPaymentId(result.payment_id);
+        
+        // Use the invoice_url from the response or construct one
         const invoiceUrl = result.invoice_url || `https://nowpayments.io/payment/?iid=${result.payment_id}`;
         setPaymentUrl(invoiceUrl);
 
+        console.log('🔗 Opening payment URL:', invoiceUrl);
+
+        // Open payment page in new window
         const paymentWindow = window.open(
           invoiceUrl,
-          '_blank',
-          'width=800,height=700,scrollbars=yes,resizable=yes'
+          'nowpayments',
+          'width=800,height=700,scrollbars=yes,resizable=yes,location=yes'
         );
 
         if (paymentWindow) {
+          // Start checking payment status
           checkPaymentStatus(result.payment_id);
-          alert('Payment page created successfully! Please complete the payment.');
+          
+          // Show success message
+          alert(`✅ Payment page opened successfully!\n\nOrder ID: ${orderIdGenerated}\nPayment ID: ${result.payment_id}\n\nPlease complete the payment in the new window.`);
         } else {
-          alert('Pop-up blocked. Please allow pop-ups and try again.');
+          alert('❌ Pop-up blocked! Please allow pop-ups and try again.');
         }
       } else {
-        throw new Error('No payment_id returned');
+        throw new Error('No payment_id returned from NOWPayments');
       }
 
     } catch (error) {
-      console.error('Error creating payment:', error);
+      console.error('❌ Error creating payment:', error);
       alert(
-        `Error creating payment page.\n\n` +
+        `❌ Error creating payment page.\n\n` +
+        `Error: ${error instanceof Error ? error.message : 'Unknown error'}\n` +
         `Order ID: ${orderId}\n` +
         `Amount: $${ticketInfo.cryptoPrice}\n\n` +
-        `Please contact us via WhatsApp: ${whatsappNumber}\n` +
-        `or send an email with your order ID.`
+        `Please contact us via WhatsApp: ${whatsappNumber}`
       );
-      setCurrentStep(5);
+      setCurrentStep(5); // Go to contact step
     } finally {
       setPaymentProcessing(false);
     }
   };
 
-  // Check payment status
+  // Check payment status periodically
   const checkPaymentStatus = async (paymentIdToCheck: string) => {
     try {
-      console.log('Checking payment status for:', paymentIdToCheck);
+      console.log('🔍 Checking payment status for:', paymentIdToCheck);
       
-      const response = await fetch(`https://api.nowpayments.io/v1/payment/${paymentIdToCheck}`, {
+      const response = await fetch(`${NOWPAYMENTS_API_URL}/payment/${paymentIdToCheck}`, {
         method: 'GET',
         headers: {
           'x-api-key': NOWPAYMENTS_API_KEY
@@ -180,34 +192,43 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Payment status:', result.payment_status);
+        console.log('📊 Payment status:', result.payment_status);
 
-        // Payment completed
+        // Payment completed successfully
         if (['finished', 'confirmed'].includes(result.payment_status)) {
+          console.log('✅ Payment confirmed!');
           setPaymentConfirmed(true);
           setCurrentStep(5);
-          alert('Payment confirmed successfully!');
+          alert('🎉 Payment confirmed successfully! Your tickets are secured.');
           return;
         }
 
-        // Payment pending
-        if (['waiting', 'confirming', 'sending'].includes(result.payment_status)) {
-          console.log('Payment still processing, checking again in 10 seconds...');
+        // Payment is still processing
+        if (['waiting', 'confirming', 'sending', 'partially_paid'].includes(result.payment_status)) {
+          console.log('⏳ Payment still processing, checking again in 10 seconds...');
           setTimeout(() => checkPaymentStatus(paymentIdToCheck), 10000);
+          return;
         }
 
         // Payment failed or expired
-        if (['failed', 'expired'].includes(result.payment_status)) {
-          alert('Payment failed or expired. Please try again.');
+        if (['failed', 'expired', 'refunded'].includes(result.payment_status)) {
+          console.log('❌ Payment failed or expired');
+          alert(`❌ Payment ${result.payment_status}. Please try again or contact support.`);
+          return;
         }
+
+        // Unknown status, keep checking
+        console.log('❓ Unknown payment status, will check again...');
+        setTimeout(() => checkPaymentStatus(paymentIdToCheck), 15000);
+
       } else {
-        console.error('Error checking payment status:', response.status);
-        // Retry after 15 seconds on error
+        console.error('❌ Error checking payment status:', response.status);
+        // Retry after error
         setTimeout(() => checkPaymentStatus(paymentIdToCheck), 15000);
       }
     } catch (error) {
-      console.error('Error checking payment status:', error);
-      // Retry after 15 seconds
+      console.error('❌ Error checking payment status:', error);
+      // Retry after error
       setTimeout(() => checkPaymentStatus(paymentIdToCheck), 15000);
     }
   };
@@ -488,7 +509,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                 {currentStep === 1 && 'Personal Information'}
                 {currentStep === 2 && 'Address Details'}
                 {currentStep === 3 && 'Terms & Conditions'}
-                {currentStep === 4 && 'Crypto Payment'}
+                {currentStep === 4 && 'NOWPayments Crypto Payment'}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -733,13 +754,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
             </div>
           )}
 
-          {/* Step 4: Crypto Wallet Payment */}
+          {/* Step 4: NOWPayments Crypto Payment */}
           {currentStep === 4 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
                 <div className="text-4xl mb-2">💎</div>
-                <h3 className="text-xl font-bold text-gray-800">Crypto Wallet Payment</h3>
-                <p className="text-gray-600">Pay using MetaMask, Trust Wallet, or any crypto wallet</p>
+                <h3 className="text-xl font-bold text-gray-800">NOWPayments Crypto Payment</h3>
+                <p className="text-gray-600">Secure cryptocurrency payment via NOWPayments</p>
               </div>
 
               <div className="bg-blue-50 rounded-lg p-4 mb-6">
@@ -781,27 +802,44 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                   {paymentProcessing ? (
                     <>
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                      <span>Creating payment page...</span>
+                      <span>Creating NOWPayments invoice...</span>
                     </>
                   ) : (
                     <>
                       <Wallet className="h-6 w-6" />
-                      <span>Pay with Crypto Wallet - ${ticketInfo.cryptoPrice.toLocaleString()}</span>
+                      <span>Pay ${ticketInfo.cryptoPrice.toLocaleString()} with Crypto</span>
                     </>
                   )}
                 </button>
+
+                {/* NOWPayments Information */}
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-2">
+                    <Shield className="h-5 w-5 text-purple-600 mt-0.5" />
+                    <div className="text-sm text-purple-800">
+                      <p className="font-semibold mb-1">Powered by NOWPayments:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>Secure and trusted crypto payment processor</li>
+                        <li>Supports 100+ cryptocurrencies</li>
+                        <li>Instant payment confirmation via webhook</li>
+                        <li>No registration required - pay directly from your wallet</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Additional information */}
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <div className="flex items-start space-x-2">
                     <Info className="h-5 w-5 text-yellow-600 mt-0.5" />
                     <div className="text-sm text-yellow-800">
-                      <p className="font-semibold mb-1">Important Information:</p>
+                      <p className="font-semibold mb-1">Payment Process:</p>
                       <ul className="list-disc list-inside space-y-1">
-                        <li>A new payment page will open in a separate window</li>
+                        <li>Click the payment button to open NOWPayments</li>
                         <li>Choose your preferred cryptocurrency</li>
-                        <li>Complete payment using your wallet</li>
-                        <li>Payment confirmation is automatic via webhook</li>
+                        <li>Send payment from your wallet to the provided address</li>
+                        <li>Payment confirmation is automatic</li>
+                        <li>Your tickets will be available for download immediately</li>
                       </ul>
                     </div>
                   </div>
@@ -822,10 +860,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
               <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                 <div className="text-sm text-gray-600 space-y-1">
                   <div><strong>Order ID:</strong> {orderId}</div>
-                  <div><strong>Transaction ID:</strong> {paymentId || 'Processing'}</div>
+                  <div><strong>Payment ID:</strong> {paymentId || 'Processing'}</div>
                   <div><strong>Name:</strong> {formData.firstName} {formData.lastName}</div>
                   <div><strong>Email:</strong> {formData.email}</div>
                   <div><strong>Amount Paid:</strong> ${ticketInfo.cryptoPrice.toLocaleString()} USD</div>
+                  <div><strong>Payment Method:</strong> Cryptocurrency (NOWPayments)</div>
                 </div>
               </div>
 
@@ -882,7 +921,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                 </button>
               ) : (
                 <div className="ml-auto">
-                  <p className="text-sm text-gray-600">Click the crypto wallet button to complete your purchase</p>
+                  <p className="text-sm text-gray-600">Click the NOWPayments button to complete your purchase</p>
                 </div>
               )}
             </div>
