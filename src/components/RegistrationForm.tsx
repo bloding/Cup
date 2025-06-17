@@ -85,7 +85,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
   const whatsappNumber = '+34632800363';
   
   // 🔑 Your NOWPayments API Key
-  const NOWPAYMENTS_API_KEY = '53564b07-5501-446c-a623-bbf5cfc439b8';
+  const NOWPAYMENTS_API_KEY = 'W86THVT-1PCM8V2-MGDQTN0-B3WPJA2';
 
   // 💳 Create crypto payment via NOWPayments API
   const createCryptoPayment = async () => {
