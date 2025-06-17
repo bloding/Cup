@@ -96,18 +96,18 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
 
       // 📋 Payment data
       const paymentData = {
-        price_amount: ticketInfo.cryptoPrice,
-        price_currency: 'USD',
-        pay_currency: '', // User will select crypto currency
-        order_id: orderIdGenerated,
-        order_description: `FIFA World Cup 2026 - ${ticketInfo.title}`,
-        ipn_callback_url: '', // You can add webhook URL here
-        success_url: window.location.origin + '?payment=success',
-        cancel_url: window.location.origin + '?payment=cancel',
-        customer_email: formData.email,
-        is_fixed_rate: false,
-        is_fee_paid_by_user: true
-      };
+  price_amount: ticketInfo.cryptoPrice,
+  price_currency: 'USD',
+  pay_currency: '', // let user select crypto on the invoice page
+  order_id: orderIdGenerated,
+  order_description: `FIFA World Cup 2026 - ${ticketInfo.title}`,
+  success_url: window.location.origin + '?payment=success',
+  cancel_url: window.location.origin + '?payment=cancel',
+  customer_email: formData.email,
+  case: 'success', // 💡 TEST MODE → always succeeds
+  is_fixed_rate: false,
+  is_fee_paid_by_user: true
+};
 
       console.log('🚀 Creating payment with data:', paymentData);
 
